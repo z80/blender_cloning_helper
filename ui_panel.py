@@ -25,7 +25,7 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append( dir )
     
-import my_install_needed_packages
+import install_needed_packages
 
 STATE_NAME = "IGL_STATE"
 
@@ -138,7 +138,7 @@ class MESH_OT_install_python_modules( bpy.types.Operator ):
     bl_label  = "Install needed python modules: numpy, scipy, libigl"
     
     def execute( self, context ):
-        my_install_needed_packages.install_needed_packages()
+        install_needed_packages.install_needed_packages()
         return {"FINISHED"}
 
 
