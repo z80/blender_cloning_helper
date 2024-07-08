@@ -694,7 +694,35 @@ class MyMouseOperator(bpy.types.Operator):
         ray_vector = ray_vector.normalized()
 
         return ray_vector
+    
+    
+    
+    def find_closest_vertex_to_a_point( mesh, point ):
+    
+        matrix_world = mesh.matrix_world
+        
+        inv_matrix_world = matrix_world.inverted()
+        point_local = inv_matrix_world @ point
+        
+        last_best_dust = float('inf')
+        last_best_ind  = -1
 
+        vertex_inds = [ vert_ind for vert_ind, vertex in enumerate( mesh.data.vertices ) ]
+            
+        # Iterate over all the vertices in the mesh
+        for vert_ind in vertex_inds:
+            vertex = mesh.data.vertices[vert_ind]
+            vertex_pos = vertex.co
+
+            # Calculate the distance to the mouse position
+            dist = ( vertex_pos - point_local ).length
+
+            # If this vertex is closer, update the minimum distance and the closest vertex
+            if dist < last_best_dist:
+                last_best_dist = dist
+                last_best_ind  = vert_ind
+        
+        return best_vert_ind, last_best_dist
 
 
 
