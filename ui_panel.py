@@ -727,15 +727,20 @@ class MyMouseOperator(bpy.types.Operator):
 
 
 
-def on_transform_finished_callback( obj, scene ):
-    print('transformEvent')
+def on_transform_completed(obj, scene):
+    print("Transform Completed")
 
-def on_depsgraph_update( scene ):
-    depsgraph = bpy.context.evaluated_depsgraph_get()
-    for update in depsgraph.updates:
-        if update.is_updated_transform:
-            obj= bpy.context.active_object
-            on_transform_finished_callback(obj, scene)
+def on_depsgraph_update(scene, depsgraph):
+    if on_depsgraph_update.operator is None:
+        on_depsgraph_update.operator = bpy.context.active_operator
+        return
+
+    if on_depsgraph_update.operator == bpy.context.active_operator:
+        return
+
+    on_depsgraph_update.operator = None  # Reset now to not trigger recursion in next step in case it triggers a depsgraph update
+    obj = bpy.context.active_object
+    on_transform_completed(obj, scene)
 
 
 
@@ -780,11 +785,9 @@ class State:
 
 
 
-
 def register():
     bpy.utils.register_class(AnchorSymmetry)
     bpy.types.Scene.anchor_symmetry = bpy.props.PointerProperty(type=AnchorSymmetry)
-    #bpy.context.scene.anchor_symmetry = bpy.props.PointerProperty(type=AnchorSymmetry)
     
     bpy.utils.register_class(VIEW3D_PT_igl_panel)
     bpy.utils.register_class(MESH_OT_install_python_modules)
@@ -795,6 +798,7 @@ def register():
     
     # Make blender call on_depsgraph_update after each
     # update of Blender's internal dependency graph
+    on_depsgraph_update.operator = None
     bpy.app.handlers.depsgraph_update_post.append(on_depsgraph_update)
     
     bpy.utils.register_class(MyMouseOperator)
