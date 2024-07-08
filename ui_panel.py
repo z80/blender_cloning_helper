@@ -4,7 +4,7 @@ bl_info = {
     "author": "z80", 
     "version": (0, 0, 1), 
     "blender": (3, 6, 0), 
-    "location": "3D Viewport > Sidebar > IGL", 
+    "location": "3D Viewport > Sidebar > 1.21GW", 
     "description": "Some IGL bindings to ease mesh fitting", 
     "category": "Development", 
 }
@@ -43,6 +43,19 @@ OPTION_LIVE_UPDATE = "OPTION_LIVE_UPDATE"
 OPTION_DEFERRED_UPDATE = "OPTION_DEFERRED_UPDATE"
 
 
+class AnchorSymmetry(bpy.types.PropertyGroup):
+    symmetry_enum : bpy.props.EnumProperty(
+        name = "Enum of possible symmetry options",
+        description = "This is a group of checkable buttons",
+        items = [('NONE', "none", "Symmetry is disabled"),
+                 ('X', "x", "Symmetry X"),
+                 ('Y', "y", "Symmetry Y"),
+                 ('Z', "z", "Symmetry Z")]
+    )
+
+
+
+
 class VIEW3D_PT_igl_panel(bpy.types.Panel):
     """Creates a Panel in the scene context of the properties editor"""
     bl_label = "1.21 Gigawatt" # Panel top text
@@ -61,7 +74,7 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
 
 
     def draw( self, context ):
-        packages_installed = my_install_needed_packages.check_for_packages()
+        packages_installed = install_needed_packages.check_for_packages()
         if not packages_installed:
             self._ui_need_modules( context )
             
@@ -110,8 +123,12 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
     
         layout.operator( "mesh.igl_reset", text="Back to picking a mesh" )
         
-        layout.label( text="Click to add" )
-        layout.label( text="anchors" )
+        layout.label( text="Symmetry mode" )
+        row = layout.row()
+        anchor_symmetry = bpy.context.scene.anchor_symmetry
+        row.prop(anchor_symmetry, 'symmetry_enum', expand=True)
+        
+        layout.label( text="Click to add anchors" )
         layout.operator( "mesh.igl_create_anchor", text="Add an anchor(s)" )
         
         layout.separator()
@@ -737,6 +754,10 @@ class State:
 
 
 def register():
+    bpy.utils.register_class(AnchorSymmetry)
+    bpy.types.Scene.anchor_symmetry = bpy.props.PointerProperty(type=AnchorSymmetry)
+    #bpy.context.scene.anchor_symmetry = bpy.props.PointerProperty(type=AnchorSymmetry)
+    
     bpy.utils.register_class(VIEW3D_PT_igl_panel)
     bpy.utils.register_class(MESH_OT_install_python_modules)
     bpy.utils.register_class(MESH_OT_pick_selected_meshes)
@@ -765,6 +786,8 @@ def unregister():
     bpy.utils.unregister_class(MESH_OT_reset)
     
     bpy.utils.unregister_class(VIEW3D_PT_igl_panel)
+    
+    bpy.utils.unregister_class(AnchorSymmetry)
     
 
 
