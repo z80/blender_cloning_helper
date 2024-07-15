@@ -606,22 +606,25 @@ class MyMouseOperator(bpy.types.Operator):
         # Check symmetry.
         symmetry = bpy.context.scene.panel_settings.symmetry_enum
         if symmetry in ['X', 'Y', 'Z']:
+            #import pdb
+            #pdb.set_trace()
+
             pos = loc.copy()
             if symmetry == 'X':
-                pos.x = pos.-x
+                pos.x = -pos.x
             elif symmetry == 'Y':
                 pos.y = -pos.y
             else:
                 pos.z = -pos.z
 
-            best_vert_ind, world_pos = find_closest_vertex_to_a_point( mesh, pos )
+            best_vert_ind, world_pos = self.find_closest_vertex_to_a_point( mesh, pos )
             # Make sure that we don't address one and the same vertex.
             if best_vert_ind != closest_vert_ind:
                 ret = bpy.ops.object.empty_add( type='PLAIN_AXES', align='WORLD', location=(pos.x, pos.y, pos.z) )
                 mirror_anchor = bpy.context.active_object
                 mirror_anchor.scale = (0.01, 0.01, 0.01)
                 # Store vertex index in the anchor object.
-                mirror_anchor['vert_ind'] = closest_vert_ind
+                mirror_anchor['vert_ind'] = best_vert_ind
                 mirror_anchor['mirror'] = anchor
                 mirror_anchor['symmetry'] = symmetry
 
@@ -636,7 +639,6 @@ class MyMouseOperator(bpy.types.Operator):
         mesh["anchors"] = anchors
         
         # if it was the first anchor added to the mesh, store mesh data.
-        anchors_qty = len( anchors )
         if anchors_qty < 2:
             Vs, Fs, abs_vert_inds, rel_vert_inds = mesh_2_array( mesh )
             
@@ -749,14 +751,14 @@ class MyMouseOperator(bpy.types.Operator):
     
     
     
-    def find_closest_vertex_to_a_point( mesh, point ):
+    def find_closest_vertex_to_a_point( self, mesh, point ):
     
         matrix_world = mesh.matrix_world
         
         inv_matrix_world = matrix_world.inverted()
         point_local = inv_matrix_world @ point
         
-        last_best_dust = float('inf')
+        last_best_dist = float('inf')
         last_best_ind  = -1
         world_pos = None
 
@@ -776,12 +778,36 @@ class MyMouseOperator(bpy.types.Operator):
                 last_best_ind  = vert_ind
                 world_pos = matrix_world @ vertex_pos
         
-        return best_vert_ind, world_pos
+        return last_best_ind, world_pos
 
 
 
 
 def on_transform_completed(obj, scene):
+    if (obj.type != 'EMPTY'):
+        return
+
+    has_mirror = 'mirror' in obj
+    if not has_mirror:
+        return
+
+    mirror = obj['mirror']
+    
+    if mirror is None:
+        obj[symmetry] = 'NONE'
+        return
+    
+    symmetry = obj['symmetry']
+
+    loc = obj.location.copy()
+    if symmetry == 'X':
+        loc.x = -loc.x
+    elif symmetry == 'Y':
+        loc.y = -loc.y
+    elif symmetry == 'Z':
+        loc.z = -loc.z
+    mirror.location = loc
+
     print("Transform Completed")
 
 def on_depsgraph_update(scene, depsgraph):
