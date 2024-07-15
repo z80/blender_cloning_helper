@@ -27,33 +27,49 @@ if not dir in sys.path:
     
 import install_needed_packages
 
-STATE_NAME = "IGL_STATE"
 
-# Probably just one button and an explanation saying that 
-# it is necessary to select all meshes to be modified and 
-# press the button.
-MODE_PICKING_MESHES = "MODE_PICKING_MESHES"
+class PanelSettings(bpy.types.PropertyGroup):
+    mode_enum : bpy.props.EnumProperty(
+        name = "PanelMode", 
+        description="Panel mode, either mesh select or addig anchors", 
+        items = [("MESH_SELECT", "mesh_select", "Mesh select"), 
+                 ("CREATE_ANCHORS", "crate_anchors", "Create anchors")], 
+        default='MESH_SELECT'
+    )
 
-# In this mode if ref. point is dragged, meshes should be adjusted.
-# Should be live and on a button mode.
-MODE_ADDING_REF_POINTS = "MODE_ADDING_REF_POINTS"
-
-# Two options: live mesh change and on a button press.
-OPTION_LIVE_UPDATE = "OPTION_LIVE_UPDATE"
-OPTION_DEFERRED_UPDATE = "OPTION_DEFERRED_UPDATE"
-
-
-class AnchorSymmetry(bpy.types.PropertyGroup):
     symmetry_enum : bpy.props.EnumProperty(
-        name = "Enum of possible symmetry options",
+        name = "SymmetryOptions",
         description = "This is a group of checkable buttons",
         items = [('NONE', "none", "Symmetry is disabled"),
                  ('X', "x", "Symmetry X"),
                  ('Y', "y", "Symmetry Y"),
-                 ('Z', "z", "Symmetry Z")]
+                 ('Z', "z", "Symmetry Z")], 
+        default='NONE'
+    )
+
+    mesh_name: bpy.props.StringProperty( 
+        name="NOTHING", 
+        description="The name of the selected mesh"
     )
 
 
+def get_selected_mesh():
+    name = bpy.context.scene.panel_settings.mesh_name
+    if not ( name in bpy.data.meshes ):
+        return None
+
+    mesh = bpy.context.scene.objects[name]
+    return mesh
+
+
+def set_selected_mesh( mesh ):
+    if mesh is None:
+        name = "NOTHING"
+
+    else:
+        name = mesh.name
+
+    bpy.context.scene.panel_settings.mesh_name = name
 
 
 class VIEW3D_PT_igl_panel(bpy.types.Panel):
@@ -79,20 +95,20 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
             self._ui_need_modules( context )
             
         else:
-            state = State()
-            mode = state["mode"]
+            #import pdb
+            #pdb.set_trace()
+            state = bpy.context.scene.panel_settings
+            mode = state.mode_enum
             if (mode is None):
-                mode = MODE_PICKING_MESHES
+                mode = 'MESH_SELECT'
             
-            if mode == MODE_PICKING_MESHES:
+            if mode == 'MESH_SELECT':
                 self._ui_picking_meshes( context )
                 
-            elif mode == MODE_ADDING_REF_POINTS:
+            elif mode == 'CREATE_ANCHORS':
                 self._ui_adding_ref_points( context )
 
-            
-            else:
-                state["mode"] = MODE_PICK_MESHES
+ 
     
     
     
@@ -125,8 +141,8 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
         
         layout.label( text="Symmetry mode" )
         row = layout.row()
-        anchor_symmetry = bpy.context.scene.anchor_symmetry
-        row.prop(anchor_symmetry, 'symmetry_enum', expand=True)
+        panel_settings = bpy.context.scene.panel_settings
+        row.prop(panel_settings, 'symmetry_enum', expand=True)
         
         layout.label( text="Click to add anchors" )
         layout.operator( "mesh.igl_create_anchor", text="Add an anchor(s)" )
@@ -182,11 +198,11 @@ class MESH_OT_pick_selected_meshes( bpy.types.Operator ):
     def execute( self, context ):
         selected_meshes = [obj for obj in bpy.context.selected_objects if obj.type == 'MESH']
             
-        selected_mesh = selected_meshes[0]
-        
-        state = State()
-        state['mode'] = MODE_ADDING_REF_POINTS
-        state['mesh'] = selected_mesh
+        selected_mesh = bpy.types.Mesh( selected_meshes[0] )
+
+        state = bpy.context.scene.panel_settings
+        state.mode_enum = 'CREATE_ANCHORS'
+        set_selected_mesh( selected_mesh )
         return {"FINISHED"}
 
 
@@ -210,9 +226,9 @@ class MESH_OT_create_anchor( bpy.types.Operator ):
     @classmethod
     def poll( cls, context ):
         # There should be a mesh in the consideration.
-        state = State()
-        meshes = state["mesh"]
-        if meshes is None:
+        state = bpy.context.scene.panel_settings
+        mesh = get_selected_mesh()
+        if mesh is None:
             return False
         
         return True
@@ -244,8 +260,8 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         #import pdb
         #pdb.set_trace()
         
-        state = State()
-        mesh = state["mesh"]
+        state = bpy.context.scene.panel_settings
+        mesh = get_selected_mesh()
         anchors = mesh["anchors"]
         # Before adding validate that it still exists.
         existing_anchors = []
@@ -491,9 +507,9 @@ class MESH_OT_reset( bpy.types.Operator ):
         #import pdb
         #pdb.set_trace()
         
-        s = State()
-        s['mode'] = MODE_PICKING_MESHES
-        s['mesh'] = None
+        s = bpy.context.scene.panel_settings
+        s.mode_enum = 'MESH_SELECT'
+        set_selected_mesh( None )
         
         return {"FINISHED"}
         
@@ -529,8 +545,8 @@ class MyMouseOperator(bpy.types.Operator):
     
     
     def create_anchor( self, context, event ):
-        state = State()
-        mesh = state['mesh']
+        state = bpy.context.scene.panel_settings
+        mesh = get_selected_mesh()
         if 'abs_vert_inds' in mesh:
             abs_inds = mesh['abs_vert_inds']
         
@@ -577,12 +593,45 @@ class MyMouseOperator(bpy.types.Operator):
         ret = bpy.ops.object.empty_add( type='PLAIN_AXES', align='WORLD', location=(loc.x, loc.y, loc.z) )
         anchor = bpy.context.active_object
         anchor.scale = (0.01, 0.01, 0.01)
+        
+        anchor['mirror'] = None
+        anchor['symmetry'] = 'NONE'
         # Store vertex index in the anchor object.
         anchor['vert_ind'] = closest_vert_ind
         
                 
         # Add the anchor created to the list of anchors ind store it in the mesh object.
         anchors.append( anchor )
+
+        # Check symmetry.
+        symmetry = bpy.context.scene.panel_settings.symmetry_enum
+        if symmetry in ['X', 'Y', 'Z']:
+            pos = loc.copy()
+            if symmetry == 'X':
+                pos.x = pos.-x
+            elif symmetry == 'Y':
+                pos.y = -pos.y
+            else:
+                pos.z = -pos.z
+
+            best_vert_ind, world_pos = find_closest_vertex_to_a_point( mesh, pos )
+            # Make sure that we don't address one and the same vertex.
+            if best_vert_ind != closest_vert_ind:
+                ret = bpy.ops.object.empty_add( type='PLAIN_AXES', align='WORLD', location=(pos.x, pos.y, pos.z) )
+                mirror_anchor = bpy.context.active_object
+                mirror_anchor.scale = (0.01, 0.01, 0.01)
+                # Store vertex index in the anchor object.
+                mirror_anchor['vert_ind'] = closest_vert_ind
+                mirror_anchor['mirror'] = anchor
+                mirror_anchor['symmetry'] = symmetry
+
+                anchor['mirror'] = mirror_anchor
+                anchor['symmetry'] = symmetry
+
+                anchors.append( mirror_anchor )
+
+ 
+
         
         mesh["anchors"] = anchors
         
@@ -618,8 +667,11 @@ class MyMouseOperator(bpy.types.Operator):
         min_dist = float('inf')
         closest_vertex = None
 
-        state  = State()
-        mesh = state["mesh"]
+        state  = bpy.context.scene.panel_settings
+
+        #import pdb
+        #pdb.set_trace()
+        mesh = get_selected_mesh()
         
         last_best_dist = float('inf')
         
@@ -706,6 +758,7 @@ class MyMouseOperator(bpy.types.Operator):
         
         last_best_dust = float('inf')
         last_best_ind  = -1
+        world_pos = None
 
         vertex_inds = [ vert_ind for vert_ind, vertex in enumerate( mesh.data.vertices ) ]
             
@@ -721,8 +774,9 @@ class MyMouseOperator(bpy.types.Operator):
             if dist < last_best_dist:
                 last_best_dist = dist
                 last_best_ind  = vert_ind
+                world_pos = matrix_world @ vertex_pos
         
-        return best_vert_ind, last_best_dist
+        return best_vert_ind, world_pos
 
 
 
@@ -747,37 +801,6 @@ def on_depsgraph_update(scene, depsgraph):
 
 
 
-class State:
-
-    # functions to read and write the panel state.
-    def retrieve_state( self ):
-        scene = bpy.context.scene
-        if (STATE_NAME not in scene) or (scene[STATE_NAME] is None):
-            bpy.context.scene[STATE_NAME] = {}
-        
-        state = scene[STATE_NAME]
-        return state
-
-
-    def store_state( self, state ):
-        scene = bpy.context.scene
-        scene[STATE_NAME] = state
-    
-    
-    def __getitem__( self, path ):
-        state = self.retrieve_state()
-        if path in state:
-            ret = state[path]
-            return ret
-            
-        return None
-    
-    
-    def __setitem__( self, path, value ):
-        state = self.retrieve_state()
-        state[path] = value
-        
-
 
 
 
@@ -786,8 +809,8 @@ class State:
 
 
 def register():
-    bpy.utils.register_class(AnchorSymmetry)
-    bpy.types.Scene.anchor_symmetry = bpy.props.PointerProperty(type=AnchorSymmetry)
+    bpy.utils.register_class(PanelSettings)
+    bpy.types.Scene.panel_settings = bpy.props.PointerProperty(type=PanelSettings)
     
     bpy.utils.register_class(VIEW3D_PT_igl_panel)
     bpy.utils.register_class(MESH_OT_install_python_modules)
