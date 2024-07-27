@@ -55,7 +55,7 @@ class PanelSettings(bpy.types.PropertyGroup):
 
 def get_selected_mesh():
     name = bpy.context.scene.panel_settings.mesh_name
-    if not ( name in bpy.data.meshes ):
+    if not ( name in bpy.context.scene.objects ):
         return None
 
     mesh = bpy.context.scene.objects[name]
