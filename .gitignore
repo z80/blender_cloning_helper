@@ -1,4 +1,5 @@
 data
+blender_project
 *.blend
 *.blend1
 __pycache__
