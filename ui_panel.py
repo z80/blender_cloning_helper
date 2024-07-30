@@ -151,6 +151,12 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
         # Create a simple row.
         layout.label( text="Apply transform" )
         layout.operator( "mesh.igl_apply_transform", text="Apply" )
+
+        layout.separator()
+        # Create a simple row.
+        layout.label( text="Show original shape" )
+        layout.operator( "mesh.igl_apply_default_shape", text="Show" )
+
         #layout.label( text="Or return back" )
         #layout.label( text="to picking meshes" )
         #layout.operator( "mesh.igl_switch_to_editing", text="To editing" )
@@ -203,6 +209,20 @@ class MESH_OT_pick_selected_meshes( bpy.types.Operator ):
         state = bpy.context.scene.panel_settings
         state.mode_enum = 'CREATE_ANCHORS'
         set_selected_mesh( selected_mesh )
+
+        import pdb
+        pdb.set_trace()
+
+        islands_qty, island_inds, island_default_inds = enum_isolated_islands( mesh )
+        Vs, Fs = mesh_2_array( mesh )
+        Vs, Fs = to_1d_arrays( Vs, Fs )
+        
+        mesh["verts"] = Vs
+        mesh["faces"] = Fs
+        mesh["islands_qty"] = islands_qty
+        mesh["island_inds"] = island_inds
+        mesh["island_default_inds"] = island_default_inds
+
         return {"FINISHED"}
 
 
@@ -273,18 +293,33 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         
         Vs = mesh["verts"]
         Fs = mesh["faces"]
-        #rel_vert_inds = mesh["rel_vert_inds"]
-        abs_vert_inds = mesh["abs_vert_inds"]
-        rel_vert_inds = {}
-        for rel_ind, abs_ind in enumerate(abs_vert_inds):
-            rel_vert_inds[abs_ind] = rel_ind
+        islands_qty = mesh["islands_qty"]
+        island_inds = mesh["island_inds"]
+        island_default_inds = mesh["island_default_inds"]
 
         # Obtain vertex indices from anchors.
         vert_inds = []
         for anchor in anchors:
-            abs_vert_ind = anchor["vert_ind"]
-            rel_vert_ind = rel_vert_inds[abs_vert_ind]
-            vert_inds.append( rel_vert_ind )
+            vert_ind = anchor["vert_ind"]
+            vert_inds.append( vert_ind )
+
+        # Check which islands are involved.
+        selected_islands = set(())
+        for vert_ind in vert_inds:
+            island_ind = island_inds[vert_ind]
+            selected_islands.add( island_inds )
+        
+        # Go over all islands and if not involved, add default vert inds for this island.
+        vert_inds_default = []
+        for island_ind in range(islands_qty):
+            if island_ind not in selected_islands:
+                base_ind = island_ind * 3
+                for i in range(3):
+                    vert_ind_in_array = base_ind + i
+                    vert_ind = island_default_inds[vert_ind_in_array]
+                    vert_inds_default.append( vert_ind )
+
+
             
         Vs, Fs = to_2d_arrays( Vs, Fs )
         
@@ -292,9 +327,18 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         arap = igl.ARAP( Vs, Fs, 3, vert_inds )
         
         target_positions = []
+
+        # First, go over real anchors.
         for anchor in anchors:
             at = anchor.matrix_world.translation
             target_positions.append( at )
+
+        # Then, go over default positions so that isolated islands do not deform.
+        for vert_ind in vert_inds_default:
+            v = Vs[vert_ind]
+            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+            # Here might need to convert to a different data type.
+            target_positions.append( v )
         
         target_positions = np.array( target_positions )
         
@@ -304,6 +348,108 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         apply_to_mesh( mesh, Vs_new, abs_vert_inds )
         
         return {"FINISHED"}
+
+
+
+
+
+
+
+
+class MESH_OT_apply_default_shape( bpy.types.Operator ):
+    """
+    Apply saved transform the mesh had before applying ARAP.
+    """
+    
+    bl_idname = "mesh.igl_apply_default_shape"
+    bl_label  = "Apply transform to the meshes selected."
+    
+    def execute( self, context ):
+        import numpy as np
+        import igl
+        
+        #import pdb
+        #pdb.set_trace()
+
+        mesh = get_selected_mesh()
+       
+        Vs = mesh["verts"]
+        Fs = mesh["faces"]
+        Vs, Fs = to_2d_arrays( Vs, Fs )
+        
+        # Apply modified vertex coordinates to meshes.
+        apply_to_mesh( mesh, Vs )
+        
+        return {"FINISHED"}
+
+
+
+
+
+
+
+def enum_isolated_islands( mesh ):
+    """
+    Needs bmesh obtained from a normal mesh in edit mode by doing
+    bm = bmesh.new()
+    bm.from_mesh(selected_mesh.data)
+    """
+
+    bm = bmesh.new()
+    bm.from_mesh(mesh.data)
+    bm.faces.ensure_lookup_table()
+    bm.verts.ensure_lookup_table()
+ 
+    verts_qty = len(bm.verts)
+ 
+    vertex_islands = []
+    apprehended_verts=set(())
+
+    current_vert_ind = 0
+
+    while True:
+        
+        is_apprehended = current_vert_ind in apprehended_verts
+        if is_apprehended:
+            current_vert_ind += 1
+            if current_vert_ind >= verts_qty:
+                break
+
+        connected_vert_inds = find_connected_vert_inds( bm, vert_ind )
+        apprehended_verts += connected_vert_inds
+        vertex_islands.append( connected_vert_inds )
+
+    # Convert islands to lists.
+    vertex_island_lists = []
+    for island_set in vertex_silands:
+        island_list = list( island_set )
+        vertex_island_lists.append( island_list )
+
+    # For each island find 3 the most distant points.
+    island_default_inds = []
+    for island_list in vertex_island_lists:
+        inds = find_the_most_distant_point( mesh, island_list, [0] )
+        inds = inds[1:]
+        inds = find_the_most_distant_point( mesh, island_list, inds )
+        inds = find_the_most_distant_point( mesh, island_list, inds )
+        island_default_inds.extend( inds )
+
+    # Number of vertex islands.
+    islands_qty = len( vertex_islands )
+
+
+    # Correspondence of a vertex to its island
+    island_inds = [i for i in range(verts_qty)]
+    for island_ind, island_vert_inds in enumerate(vertex_island_lists):
+        for vert_ind in island_vert_inds:
+            island_inds[vert_ind] = island_ind
+
+
+    return (islands_qty, island_inds, island_default_inds)
+
+
+
+ 
 
 
 
@@ -348,10 +494,44 @@ def find_connected_vert_inds( bm, vert_ind ):
         
         vert_inds_to_add = new_vert_inds_to_add
     
-    selected_verts = list(selected_verts)
+    #selected_verts = list(selected_verts)
     
     return selected_verts
+
+
+
+def find_the_most_distant_point( mesh, island_inds, selected_vert_inds=None ):
+    """
+    This one looks for the point the most distance from the list of  provided points.
+    It appends the list with its index and returns it.
+    """
+    verts = mesh.data.vertices
+
+    best_dist = 0.0
+    best_ind  = None
     
+    for sel_vert_ind in island_inds:
+        vert = verts[abs_vert_ind]
+        sel_co = vert.co
+
+        if selected_vert_inds is None:
+            selected_vert_inds = [sel_vert_ind]
+            return selected_vert_inds
+
+        accum_dist = 0.0
+        for vert_ind in selected_vert_inds:
+            vert = verts[abs_vert_ind]
+            co = vert.co
+
+            dist = (co - sel_co).length
+            accum_dist += dist
+
+        if dist > best_dist:
+            best_dist = dist
+            best_ind = vert_ind
+
+    selected_vert_inds.append( vert_ind )
+    return selected_vert_inds
 
 
 
@@ -370,38 +550,31 @@ def mesh_2_array( selected_mesh ):
     #import pdb
     #pdb.set_trace()
 
-    connected_vert_inds = find_connected_vert_inds( bm, first_vert_ind )
-    
-    # Create lookup tables.
-    selected_ind_to_absolute_ind = []
-    absolute_ind_to_selected_ind = {}
-    for selected_ind, absolute_ind in enumerate(connected_vert_inds):
-        selected_ind_to_absolute_ind.append( absolute_ind )
-        absolute_ind_to_selected_ind[absolute_ind] = selected_ind
-    
     all_verts = []
     all_faces = []
     
     # only add faces     
     for f in bm.faces:
         face = [v.index for v in f.verts]
-        first_abs_ind = face[0]
-        if first_abs_ind in absolute_ind_to_selected_ind:
-            sel_face = []
-            for i in range(3):
-                vert_face_ind = face[i]
-                if vert_face_ind not in absolute_ind_to_selected_ind:
-                    print( "face ind ", i, " which is ", vert_face_ind, " is not in absolute_indices" )
-                selected_ind = absolute_ind_to_selected_ind[face[i]]
-                sel_face.append( selected_ind )
+
+        verts_per_face = len(face)
+        if verts_per_face == 3:
+            sel_face = [ face[0], face[1], face[2]]
             all_faces.append( sel_face )
+
+        elif verts_per_face == 4:
+            sel_face = [ face[0], face[1], face[2]]
+            all_faces.append( sel_face )
+            sel_face = [ face[0], face[2], face[3]]
+            all_faces.append( sel_face )
+
     bm.free()
     
     mat   = selected_mesh.matrix_world
     verts = selected_mesh.data.vertices
     verts_qty = len(selected_ind_to_absolute_ind)
-    for abs_vert_ind in selected_ind_to_absolute_ind:
-        vert = verts[abs_vert_ind]
+    for vert_ind in range(verts_qty):
+        vert = verts[vert_ind]
         co = vert.co
         co = mat @ co
         co = [co.x, co.y, co.z]
@@ -412,7 +585,7 @@ def mesh_2_array( selected_mesh ):
     all_verts = np.array( all_verts )
     all_faces = np.array( all_faces )
     
-    return (all_verts, all_faces, selected_ind_to_absolute_ind, absolute_ind_to_selected_ind)
+    return (all_verts, all_faces)
 
 
 
@@ -473,7 +646,7 @@ def to_2d_arrays( Vs, Fs ):
 
 
 
-def apply_to_mesh( mesh, Vs_new, abs_vert_inds ):
+def apply_to_mesh( mesh, Vs_new ):
     verts = mesh.data.vertices
     verts_qty = Vs_new.shape[0]
     
@@ -483,10 +656,9 @@ def apply_to_mesh( mesh, Vs_new, abs_vert_inds ):
     mat   = mesh.matrix_world
     inv_mat = mat.inverted()
     
-    for sel_vert_ind in range(verts_qty):
-        target_at = Vs_new[sel_vert_ind]
-        abs_vert_ind = abs_vert_inds[sel_vert_ind]
-        vert = verts[abs_vert_ind]
+    for vert_ind in range(verts_qty):
+        target_at = Vs_new[vert_ind]
+        vert = verts[vert_ind]
         co = vert.co
         co.x, co.y, co.z = target_at[0], target_at[1], target_at[2]
         co = inv_mat @ co
@@ -640,8 +812,7 @@ class MyMouseOperator(bpy.types.Operator):
         
         # if it was the first anchor added to the mesh, store mesh data.
         if anchors_qty < 2:
-            Vs, Fs, abs_vert_inds, rel_vert_inds = mesh_2_array( mesh )
-            
+            Vs, Fs = mesh_2_array( mesh )
             Vs, Fs = to_1d_arrays( Vs, Fs )
             
             #import pdb
@@ -843,6 +1014,7 @@ def register():
     bpy.utils.register_class(MESH_OT_pick_selected_meshes)
     bpy.utils.register_class(MESH_OT_create_anchor)
     bpy.utils.register_class(MESH_OT_apply_transform)
+    bpy.utils.register_class(MESH_OT_apply_default_shape)
     bpy.utils.register_class(MESH_OT_reset)
     
     # Make blender call on_depsgraph_update after each
@@ -864,6 +1036,7 @@ def unregister():
     bpy.utils.unregister_class(MESH_OT_pick_selected_meshes)
     bpy.utils.unregister_class(MESH_OT_create_anchor)
     bpy.utils.unregister_class(MESH_OT_apply_transform)
+    bpy.utils.unregister_class(MESH_OT_apply_default_shape)
     bpy.utils.unregister_class(MESH_OT_reset)
     
     bpy.utils.unregister_class(VIEW3D_PT_igl_panel)
