@@ -805,25 +805,9 @@ class MyMouseOperator(bpy.types.Operator):
 
                 anchors.append( mirror_anchor )
 
- 
-
         
         mesh["anchors"] = anchors
-        
-        # if it was the first anchor added to the mesh, store mesh data.
-        if anchors_qty < 2:
-            Vs, Fs = mesh_2_array( mesh )
-            Vs, Fs = to_1d_arrays( Vs, Fs )
-            
-            #import pdb
-            #pdb.set_trace()
 
-            mesh["verts"] = Vs
-            mesh["faces"] = Fs
-            mesh["abs_vert_inds"] = abs_vert_inds
-            # Blender cannot store a map with integer keys.
-            # Will have to re'create it each time.
-            #mesh["rel_vert_inds"] = rel_vert_inds
 
 
     
