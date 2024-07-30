@@ -213,7 +213,7 @@ class MESH_OT_pick_selected_meshes( bpy.types.Operator ):
         import pdb
         pdb.set_trace()
 
-        islands_qty, island_inds, island_default_inds = enum_isolated_islands( mesh )
+        islands_qty, island_inds, island_default_inds = enum_isolated_islands( selected_mesh )
         Vs, Fs = mesh_2_array( mesh )
         Vs, Fs = to_1d_arrays( Vs, Fs )
         
