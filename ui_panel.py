@@ -210,18 +210,18 @@ class MESH_OT_pick_selected_meshes( bpy.types.Operator ):
         state.mode_enum = 'CREATE_ANCHORS'
         set_selected_mesh( selected_mesh )
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         islands_qty, island_inds, island_default_inds = enum_isolated_islands( selected_mesh )
-        Vs, Fs = mesh_2_array( mesh )
+        Vs, Fs = mesh_2_array( selected_mesh )
         Vs, Fs = to_1d_arrays( Vs, Fs )
         
-        mesh["verts"] = Vs
-        mesh["faces"] = Fs
-        mesh["islands_qty"] = islands_qty
-        mesh["island_inds"] = island_inds
-        mesh["island_default_inds"] = island_default_inds
+        selected_mesh["verts"] = Vs
+        selected_mesh["faces"] = Fs
+        selected_mesh["islands_qty"] = islands_qty
+        selected_mesh["island_inds"] = island_inds
+        selected_mesh["island_default_inds"] = island_default_inds
 
         return {"FINISHED"}
 
@@ -294,8 +294,16 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         Vs = mesh["verts"]
         Fs = mesh["faces"]
         islands_qty = mesh["islands_qty"]
-        island_inds = mesh["island_inds"]
-        island_default_inds = mesh["island_default_inds"]
+        island_inds_b = list( mesh["island_inds"] )
+        island_default_inds_b = list( mesh["island_default_inds"] )
+
+        island_inds = []
+        for v in island_inds_b:
+            island_inds.append( int(v) )
+
+        island_default_inds = []
+        for v in island_default_inds_b:
+            island_default_inds.append( int(v) )
 
         # Obtain vertex indices from anchors.
         vert_inds = []
@@ -307,11 +315,12 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         selected_islands = set(())
         for vert_ind in vert_inds:
             island_ind = island_inds[vert_ind]
-            selected_islands.add( island_inds )
+            selected_islands.add( island_ind )
         
         # Go over all islands and if not involved, add default vert inds for this island.
         vert_inds_default = []
         for island_ind in range(islands_qty):
+  
             if island_ind not in selected_islands:
                 base_ind = island_ind * 3
                 for i in range(3):
@@ -323,9 +332,7 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
             
         Vs, Fs = to_2d_arrays( Vs, Fs )
         
-        # IGL precomputation
-        arap = igl.ARAP( Vs, Fs, 3, vert_inds )
-        
+       
         target_positions = []
 
         # First, go over real anchors.
@@ -336,16 +343,18 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         # Then, go over default positions so that isolated islands do not deform.
         for vert_ind in vert_inds_default:
             v = Vs[vert_ind]
-            # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-            # Here might need to convert to a different data type.
-            target_positions.append( v )
+            target_positions.append( mathutils.Vector( v ) )
+            vert_inds.append( vert_ind )
         
         target_positions = np.array( target_positions )
         
+        # IGL precomputation
+        arap = igl.ARAP( Vs, Fs, 3, vert_inds )
+        # IGL solve
         Vs_new = arap.solve( target_positions, Vs )
         
         # Apply modified vertex coordinates to meshes.
-        apply_to_mesh( mesh, Vs_new, abs_vert_inds )
+        apply_to_mesh( mesh, Vs_new )
         
         return {"FINISHED"}
 
@@ -415,13 +424,15 @@ def enum_isolated_islands( mesh ):
             if current_vert_ind >= verts_qty:
                 break
 
-        connected_vert_inds = find_connected_vert_inds( bm, vert_ind )
-        apprehended_verts += connected_vert_inds
+            continue
+
+        connected_vert_inds = find_connected_vert_inds( bm, current_vert_ind )
+        apprehended_verts = apprehended_verts.union( connected_vert_inds )
         vertex_islands.append( connected_vert_inds )
 
     # Convert islands to lists.
     vertex_island_lists = []
-    for island_set in vertex_silands:
+    for island_set in vertex_islands:
         island_list = list( island_set )
         vertex_island_lists.append( island_list )
 
@@ -444,6 +455,13 @@ def enum_isolated_islands( mesh ):
         for vert_ind in island_vert_inds:
             island_inds[vert_ind] = island_ind
 
+
+    # Convert indices to float, Blender converts integer arrayy to something peculiar.
+    for i, v in enumerate(island_inds):
+        island_inds[i] = float(v)
+
+    for i, v in enumerate(island_default_inds):
+        island_default_inds[i] = float(v)
 
     return (islands_qty, island_inds, island_default_inds)
 
@@ -511,7 +529,7 @@ def find_the_most_distant_point( mesh, island_inds, selected_vert_inds=None ):
     best_ind  = None
     
     for sel_vert_ind in island_inds:
-        vert = verts[abs_vert_ind]
+        vert = verts[sel_vert_ind]
         sel_co = vert.co
 
         if selected_vert_inds is None:
@@ -520,27 +538,23 @@ def find_the_most_distant_point( mesh, island_inds, selected_vert_inds=None ):
 
         accum_dist = 0.0
         for vert_ind in selected_vert_inds:
-            vert = verts[abs_vert_ind]
+            vert = verts[vert_ind]
             co = vert.co
 
             dist = (co - sel_co).length
             accum_dist += dist
 
         if dist > best_dist:
-            best_dist = dist
-            best_ind = vert_ind
+            best_dist = accum_dist
+            best_ind = sel_vert_ind
 
-    selected_vert_inds.append( vert_ind )
+    selected_vert_inds.append( best_ind )
     return selected_vert_inds
 
 
 
 def mesh_2_array( selected_mesh ):
     import numpy as np
-    
-    anchors = selected_mesh['anchors']
-    anchor = anchors[0]
-    first_vert_ind = anchor['vert_ind']
     
     bm = bmesh.new()
     bm.from_mesh(selected_mesh.data)
@@ -572,7 +586,7 @@ def mesh_2_array( selected_mesh ):
     
     mat   = selected_mesh.matrix_world
     verts = selected_mesh.data.vertices
-    verts_qty = len(selected_ind_to_absolute_ind)
+    verts_qty = len(verts)
     for vert_ind in range(verts_qty):
         vert = verts[vert_ind]
         co = vert.co
