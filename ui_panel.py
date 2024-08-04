@@ -500,11 +500,16 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         for v in island_default_inds_b:
             island_default_inds.append( int(v) )
 
+
+        # Get fixed vertex indices.
+        fixed_vertices = get_fixed_verts( mesh )
+
         # Obtain vertex indices from anchors.
         vert_inds = []
         for anchor in anchors:
             vert_ind = anchor["vert_ind"]
-            vert_inds.append( vert_ind )
+            if vert_ind not in fixed_vertices:
+                vert_inds.append( vert_ind )
 
         # Check which islands are involved.
         selected_islands = set(())
@@ -521,8 +526,12 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
                 for i in range(3):
                     vert_ind_in_array = base_ind + i
                     vert_ind = island_default_inds[vert_ind_in_array]
-                    vert_inds_default.append( vert_ind )
+                    if vert_ind not in fixed_vertices:
+                        vert_inds_default.append( vert_ind )
 
+        # Aslo add all fixed vertices to the same list.
+        for vert_ind in fixed_vertices:
+            vert_inds_default.append( vert_ind )
 
             
         Vs, Fs = to_2d_arrays( Vs, Fs )
@@ -542,6 +551,9 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
             vert_inds.append( vert_ind )
         
         target_positions = np.array( target_positions )
+
+        #import pdb
+        #pdb.set_trace()
         
         # IGL precomputation
         arap = igl.ARAP( Vs, Fs, 3, vert_inds )
