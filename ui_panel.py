@@ -72,6 +72,29 @@ def set_selected_mesh( mesh ):
     bpy.context.scene.panel_settings.mesh_name = name
 
 
+def get_fixed_verts( mesh ):
+    fixed_verts = set( () )
+
+    if 'fixed_verts' in mesh:
+        fixed_verts_float = mesh['fixed_verts']
+        for vert_ind in fixed_verts_float:
+            vert_ind = int( vert_ind )
+            fixed_verts.add( vert_ind )
+
+    return fixed_verts
+
+
+def set_fixed_verts( mesh, fixed_verts ):
+    # Convert to float and store in the mesh.
+    fixed_verts_float = []
+    for vert_ind in fixed_verts:
+        vert_ind = float( vert_ind )
+        fixed_verts_float.append( vert_ind )
+
+    mesh['fixed_verts'] = fixed_verts_float
+
+
+
 class VIEW3D_PT_igl_panel(bpy.types.Panel):
     """Creates a Panel in the scene context of the properties editor"""
     bl_label = "1.21 Gigawatt" # Panel top text
@@ -106,8 +129,12 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
                 self._ui_picking_meshes( context )
                 
             elif mode == 'CREATE_ANCHORS':
-                self._ui_adding_ref_points( context )
+                mode = bpy.context.active_object.mode
+                if mode == 'EDIT':
+                    self._ui_fixed_points( context )
 
+                else:
+                    self._ui_adding_ref_points( context )
  
     
     
@@ -134,11 +161,38 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
         layout.operator( "mesh.igl_pick_meshes", text="Pick a mesh" )
 
 
+
+
+    def _ui_fixed_points( self, context ):
+        layout = self.layout
+    
+        layout.operator( "mesh.igl_reset", text="Back to picking a mesh" )
+      
+        layout.label( text="To go back to anchors" )
+        layout.label( text="switch to OBJECT mode" )
+
+        layout.label( text="Make selected vertices fixed" )
+        layout.operator( "mesh.igl_add_selected_to_fixed", text="Make fixed" )
+ 
+        layout.label( text="Make selected vertices movable" )
+        layout.operator( "mesh.igl_remove_selected_from_fixed", text="Make movable" )
+ 
+        layout.label( text="Select all fixed vertices" )
+        layout.operator( "mesh.igl_select_fixed", text="Select fixed" )
+
+
+
+
+
+
     def _ui_adding_ref_points( self, context ):
         layout = self.layout
     
         layout.operator( "mesh.igl_reset", text="Back to picking a mesh" )
-        
+ 
+        layout.label( text="To pick fixed vertices" )
+        layout.label( text="switch to EDIT mode" )
+       
         layout.label( text="Symmetry mode" )
         row = layout.row()
         panel_settings = bpy.context.scene.panel_settings
@@ -224,6 +278,147 @@ class MESH_OT_pick_selected_meshes( bpy.types.Operator ):
         selected_mesh["island_default_inds"] = island_default_inds
 
         return {"FINISHED"}
+
+
+
+
+
+
+
+
+# Add selected vertices to fixed vertices list.
+class MESH_OT_add_selected_to_fixed( bpy.types.Operator ):
+    """
+    When selected mesh is in edit mode all selected vertices 
+    are added to fixed vertices list.
+    """
+    
+    bl_idname = "mesh.igl_add_selected_to_fixed"
+    bl_label  = "Pick all selected vertices and put them into the fixed vertices list."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+
+        mode = bpy.context.active_object.mode
+        if mode != 'EDIT':
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        bm = bmesh.from_edit_mesh(mesh.data)
+    
+        # Get the indices of selected vertices
+        selected_verts = [v.index for v in bm.verts if v.select]
+
+        fixed_verts = get_fixed_verts( mesh )
+
+        for selected_ind in selected_verts:
+            fixed_verts.add( selected_ind )
+
+        set_fixed_verts( mesh, fixed_verts )
+
+        return {"FINISHED"}
+
+
+
+
+
+
+# Remove selected vertices from fixed vertices list.
+class MESH_OT_remove_selected_from_fixed( bpy.types.Operator ):
+    """
+    When selected mesh is in edit mode all selected vertices 
+    are removed from fixed vertices list.
+    """
+    
+    bl_idname = "mesh.igl_remove_selected_from_fixed"
+    bl_label  = "Pick all selected vertices and remove them from fixed vertices_list."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+
+        mode = bpy.context.active_object.mode
+        if mode != 'EDIT':
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        bm = bmesh.from_edit_mesh(mesh.data)
+    
+        # Get the indices of selected vertices
+        selected_verts = [v.index for v in bm.verts if v.select]
+
+        fixed_verts = get_fixed_verts( mesh )
+
+        for selected_ind in selected_verts:
+            fixed_verts.discard( selected_ind )
+
+        set_fixed_verts( mesh, fixed_verts )
+
+        return {"FINISHED"}
+
+
+
+
+
+# Remove selected vertices from fixed vertices list.
+class MESH_OT_select_fixed( bpy.types.Operator ):
+    """
+    When selected mesh is in edit mode all fixed vertices are selected 
+    and movable vertices are unselected.
+    """
+    
+    bl_idname = "mesh.igl_select_fixed"
+    bl_label  = "Select all fixed vertices and unselect all movable vertices."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+
+        mode = bpy.context.active_object.mode
+        if mode != 'EDIT':
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        bm = bmesh.from_edit_mesh(mesh.data)
+    
+        fixed_verts = get_fixed_verts( mesh )
+
+        print( "fixed_verts: ", fixed_verts )
+
+        #mesh.select_all(action='DESELECT')
+
+        for v in bm.verts:
+            index = v.index
+            v.select = (index in fixed_verts)
+
+        # Update the mesh to reflect the changes
+        bmesh.update_edit_mesh( mesh.data )
+
+        return {"FINISHED"}
+
+
 
 
 
@@ -1010,6 +1205,9 @@ def register():
     bpy.utils.register_class(VIEW3D_PT_igl_panel)
     bpy.utils.register_class(MESH_OT_install_python_modules)
     bpy.utils.register_class(MESH_OT_pick_selected_meshes)
+    bpy.utils.register_class(MESH_OT_add_selected_to_fixed)
+    bpy.utils.register_class(MESH_OT_remove_selected_from_fixed)
+    bpy.utils.register_class(MESH_OT_select_fixed)
     bpy.utils.register_class(MESH_OT_create_anchor)
     bpy.utils.register_class(MESH_OT_apply_transform)
     bpy.utils.register_class(MESH_OT_apply_default_shape)
@@ -1032,6 +1230,9 @@ def unregister():
 
     bpy.utils.unregister_class(MESH_OT_install_python_modules)
     bpy.utils.unregister_class(MESH_OT_pick_selected_meshes)
+    bpy.utils.unregister_class(MESH_OT_add_selected_to_fixed)
+    bpy.utils.unregister_class(MESH_OT_remove_selected_from_fixed)
+    bpy.utils.unregister_class(MESH_OT_select_fixed)
     bpy.utils.unregister_class(MESH_OT_create_anchor)
     bpy.utils.unregister_class(MESH_OT_apply_transform)
     bpy.utils.unregister_class(MESH_OT_apply_default_shape)
