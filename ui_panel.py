@@ -33,7 +33,8 @@ class PanelSettings(bpy.types.PropertyGroup):
         name = "PanelMode", 
         description="Panel mode, either mesh select or addig anchors", 
         items = [("MESH_SELECT", "mesh_select", "Mesh select"), 
-                 ("CREATE_ANCHORS", "crate_anchors", "Create anchors")], 
+                 ("CREATE_ANCHORS", "crate_anchors", "Create anchors"), 
+                 ("PICK_VERTICES", "pick_vertices", "Pick vertices")], 
         default='MESH_SELECT'
     )
 
@@ -135,6 +136,9 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
 
                 else:
                     self._ui_adding_ref_points( context )
+
+            elif mode == 'PICK_VERTICES':
+                self._ui_picking_vertices( context )
  
     
     
@@ -217,6 +221,10 @@ class VIEW3D_PT_igl_panel(bpy.types.Panel):
 
 
 
+    def _ui_picking_vertices( self, context ):
+        layout = self.layout
+
+        layout.label( text="Press ESC to stop picking vertices" )
 
 
 
@@ -450,6 +458,9 @@ class MESH_OT_create_anchor( bpy.types.Operator ):
     
     
     def execute( self, context ):
+        state = bpy.context.scene.panel_settings
+        state.mode_enum = 'PICK_VERTICES'
+
         bpy.ops.wm.my_mouse_operator('INVOKE_DEFAULT')
         return {"FINISHED"}
 
@@ -925,9 +936,15 @@ class MyMouseOperator(bpy.types.Operator):
                 print('Left mouse button released')
                 # Or put your custom code here
                 self.create_anchor( context, event )
-                return {'CANCELLED'}
+                #return {'CANCELLED'}
+                # Don't exit. Only exit on ESC.
+                return {'RUNNING_MODAL'}
         
         elif event.type == 'ESC':  # If we've pressed the ESC key
+            print( "Returning back to normal UI" )
+            state = bpy.context.scene.panel_settings
+            state.mode_enum = 'CREATE_ANCHORS'
+
             return {'CANCELLED'}
 
         return {'RUNNING_MODAL'}
