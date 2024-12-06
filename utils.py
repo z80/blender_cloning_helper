@@ -45,6 +45,11 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
 
     # Set of fixed vertex indices for fast lookup.
     fixed_vertices_set = set( fixed_vertices )
+
+    # Also a dictionary of indices in the array by absolute vertex index for fast lookup.
+    fixed_vertex_indices = {}
+    for i, idx in enumerate( fixed_vertices ):
+        fixed_vertex_indices[idx] = i
     
     # Initialize variables
     N = V.shape[0]
@@ -65,8 +70,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
                 V2 = w2*(V[i0] - V[i2])
                 Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
                 Pi     = Pi_Pi_new[0]
-                P[i1] = V1
-                P[i2] = V2
+                Pi[i1] = V1
+                Pi[i2] = V2
 
                 V1_new = (V_new[i0] - V_new[i1])
                 V2_new = (V_new[i0] - V_new[i2])
@@ -74,20 +79,26 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
                 Pi_new[i1] = V1_new
                 Pi_new[i2] = V2_new
 
+                P_P_new[i0] = ( Pi, Pi_new )
+
         for face in F:
             i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
             Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
             Pi     = Pi_Pi_new[0]
             Pi_new = Pi_Pi_new[1]
-            qty    = Pi.size()
+            qty    = len(Pi)
             
             mPi     = np.zeros( (3, qty) )
-            for ind, V in mPi.items():
+            ind = 0
+            for i, V in Pi.items():
                 mPi[ind] = V
+                ind += 1
 
             mPi_new = np.zeros( (3, qty) )
-            for ind, V in mPi_new.items():
+            ind = 0
+            for i, V in Pi_new.items():
                 mPi_new[ind] = V
+                ind += 1
 
             Si = np.dot( mPi, mPi_new.T )
 
@@ -101,13 +112,36 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         for face in F:
             for j in range(3):
                 i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+                i0_fixed = i0 in fixed_vertices_set
+                i1_fixed = i1 in fixed_vertices_set
+                i2_fixed = i2 in fixed_vertices_set
+
                 w01 = cotangent_weights[ (i0, i1) ]
                 w02 = cotangent_weights[ (i0, i2) ]
-                L[i0, i0] += w01
-                L[i0, i1] -= w01
+                if i0_fixed:
+                    vert_idx = fixed_vertex_indices[i0]
+                    p0       = fixed_positions[vert_idx]
+                    v        = w01 * p0
+                    b[i0]   -= v
+                else:
+                    L[i0, i0] += w01
+                    L[i0, i0] += w02
 
-                L[i0, i0] += w02
-                L[i0, i2] -= w02
+                if i1_fixed:
+                    vert_idx = fixed_vertex_indices[i1]
+                    p1       = fixed_positions[vert_idx]
+                    v        = w01 * p1
+                    b[i0]   += v
+                else:
+                    L[i0, i1] -= w01
+
+                if i2_fixed:
+                    vert_idx = fixed_vertex_indices[i2]
+                    p2       = fixed_positions[vert_idx]
+                    v        = w02 * p2
+                    b[i0]   += v
+                else:
+                    L[i0, i2] -= w02
 
                 pi0 = V[i0]
                 pi1 = V[i1]
@@ -120,16 +154,34 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
                 b[i0] += 0.5*w01*np.dot( (Ri0 + Ri1), (pi0 - pi1) )
                 b[i0] += 0.5*w02*np.dot( (Ri0 + Ri2), (pi0 - pi2) )
 
-
-        # Step 5: Apply fixed vertices constraints
-        L = L.tocsr()
-        for idx, pos in zip(fixed_vertices, fixed_positions):
-            L[idx] = 0
-            L[idx, idx] = 1
-            b[idx] = pos
+        # Remove rows in both 'L' and 'b' which correspond to fixed indices.
+        b = np.delete( b, fixed_vertices, axis=0 )
+        # For csr_matrix it is only possible to keep, not remove. Need index inversion for that.
+        # Compute indices to keep
+        all_indices = np.arange(N)
+        keep_indices = np.delete(all_indices, fixed_vertices)
+        # Filter the rows
+        L = L[keep_indices, :]
+        # In L also delete columns.
+        L = L[:, keep_indices]
         
         # Step 6: Solve linear system
-        V_new = spsolve(L, b)
+        V_some = spsolve(L, b)
+
+        # Fill in V_new matrix.
+        idx = 0
+        fixed_idx = 0
+        for i in range(N):
+            is_fixed = i in fixed_vertices_set
+            if is_fixed:
+                v = fixed_positions[fixed_idx]
+                V_new[i] = v
+                fixed_idx += 1
+
+            else:
+                v = V_some[idx]
+                V_new[i] = v
+                idx += 1
 
     return V_new
 
