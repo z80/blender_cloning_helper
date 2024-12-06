@@ -42,16 +42,15 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
     """
     # Compute cotangent weights
     cotangent_weights = compute_cotangent_weights(V, F)
+
+    # Set of fixed vertex indices for fast lookup.
+    fixed_vertices_set = set( fixed_vertices )
     
     # Initialize variables
     N = V.shape[0]
     V_new = V.copy()
     
-    centroids = np.mean(V[F], axis=1)
-
     for iter in range(iterations):
-        # Step 1: Compute centroids of faces
-        centroids_new = np.mean(V_new[F], axis=1)
         
         # Step 2: Compute rotations
         R = np.zeros((N, 3, 3))
