@@ -81,7 +81,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
 
                 P_P_new[i0] = ( Pi, Pi_new )
 
-        for face in F:
+        for face_ind, face in enumerate(F):
             i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
             Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
             Pi     = Pi_Pi_new[0]
@@ -91,20 +91,20 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
             mPi     = np.zeros( (3, qty) )
             ind = 0
             for i, V in Pi.items():
-                mPi[ind] = V
+                mPi[:, ind] = V
                 ind += 1
 
             mPi_new = np.zeros( (3, qty) )
             ind = 0
             for i, V in Pi_new.items():
-                mPi_new[ind] = V
+                mPi_new[:, ind] = V
                 ind += 1
 
             Si = np.dot( mPi, mPi_new.T )
 
             # Use SVD to find the optimal rotation.
             U, _, VT = np.linalg.svd( Si )
-            R[i] = np.dot(U, VT)
+            R[face_ind] = np.dot(U, VT)
 
         # Step 4: Build linear system with cotangent weights
         L = csr_matrix((N, N))
