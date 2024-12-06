@@ -52,13 +52,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         fixed_vertex_indices[idx] = i
     
     # Initialize variables
-    N = V.shape[0]
-    V_new = V.copy()
+    N         = V.shape[0]
+    faces_qty = F.shape[0]
+    V_new     = V.copy()
     
     for iter in range(iterations):
         
-        # Step 2: Compute rotations
-        R = np.zeros((N, 3, 3))
+        # Compute rotations
+        R = np.zeros((faces_qty, 3, 3))
         
         P_P_new     = {}
         for face in F:
@@ -90,14 +91,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
             
             mPi     = np.zeros( (3, qty) )
             ind = 0
-            for i, V in Pi.items():
-                mPi[:, ind] = V
+            for i, Vi in Pi.items():
+                mPi[:, ind] = Vi
                 ind += 1
 
             mPi_new = np.zeros( (3, qty) )
             ind = 0
-            for i, V in Pi_new.items():
-                mPi_new[:, ind] = V
+            for i, Vi in Pi_new.items():
+                mPi_new[:, ind] = Vi
                 ind += 1
 
             Si = np.dot( mPi, mPi_new.T )
@@ -106,10 +107,18 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
             U, _, VT = np.linalg.svd( Si )
             R[face_ind] = np.dot(U, VT)
 
-        # Step 4: Build linear system with cotangent weights
+        # Build linear system with cotangent weights
         L = csr_matrix((N, N))
         b = np.zeros((N, 3))
-        for face in F:
+        for face_ind, face in enumerate(F):
+            Ri = R[face_ind]
+            # We don't go over all edges comint from the vertes but over faces instead.
+            # For each face the rotation matrix is the same.
+            Ri = R[face_ind]
+            Ri0 = Ri
+            Ri1 = Ri
+            Ri2 = Ri
+
             for j in range(3):
                 i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
                 i0_fixed = i0 in fixed_vertices_set
@@ -147,12 +156,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
                 pi1 = V[i1]
                 pi2 = V[i2]
 
-                Ri0 = R[i0]
-                Ri1 = R[i1]
-                Ri2 = R[i2]
-
-                b[i0] += 0.5*w01*np.dot( (Ri0 + Ri1), (pi0 - pi1) )
-                b[i0] += 0.5*w02*np.dot( (Ri0 + Ri2), (pi0 - pi2) )
+                v1 = 0.5*w01*np.dot( (Ri0 + Ri1), (pi0 - pi1) )
+                v2 = 0.5*w02*np.dot( (Ri0 + Ri2), (pi0 - pi2) )
+                b[i0] += v1 + v2
 
         # Remove rows in both 'L' and 'b' which correspond to fixed indices.
         b = np.delete( b, fixed_vertices, axis=0 )
@@ -165,7 +171,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         # In L also delete columns.
         L = L[:, keep_indices]
         
-        # Step 6: Solve linear system
+        # Solve linear system
         V_some = spsolve(L, b)
 
         # Fill in V_new matrix.
