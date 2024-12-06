@@ -21,13 +21,9 @@ def compute_cotangent_weights(V, F):
             v0, v1, v2 = V[i0], V[i1], V[i2]
             edge1, edge2 = v1 - v0, v2 - v0
             angle = np.arccos(np.clip(np.dot(edge1, edge2) / (np.linalg.norm(edge1) * np.linalg.norm(edge2)), -1.0, 1.0))
-            cot_angle = 1 / np.tan(angle)
-            weights[(i0, i1)] = weights.get((i0, i1), 0) + 0.5 * cot_angle
-            weights[(i1, i0)] = weights.get((i1, i0), 0) + 0.5 * cot_angle
-            weights[(i1, i2)] = weights.get((i1, i2), 0) + 0.5 * cot_angle
-            weights[(i2, i1)] = weights.get((i2, i1), 0) + 0.5 * cot_angle
-            weights[(i2, i0)] = weights.get((i2, i0), 0) + 0.5 * cot_angle
-            weights[(i0, i2)] = weights.get((i0, i2), 0) + 0.5 * cot_angle
+            cot_angle_2 = 0.5 / np.tan(angle)
+            weights[(i1, i2)] = weights.get( (i1, i2), 0) + cot_angle_2
+            weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
 def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
@@ -51,39 +47,80 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
     N = V.shape[0]
     V_new = V.copy()
     
+    centroids = np.mean(V[F], axis=1)
+
     for iter in range(iterations):
         # Step 1: Compute centroids of faces
-        centroids = np.mean(V_new[F], axis=1)
+        centroids_new = np.mean(V_new[F], axis=1)
         
         # Step 2: Compute rotations
         R = np.zeros((N, 3, 3))
-        for i, face in enumerate(F):
-            for j in range(3):
-                vi = V[face[j]]
-                vj = V[face[(j + 1) % 3]]
-                vi_new = V_new[face[j]]
-                vj_new = V_new[face[(j + 1) % 3]]
-                
-                A = np.outer(vi - centroids[i], vj - centroids[i])
-                B = np.outer(vi_new - centroids[i], vj_new - centroids[i])
-                U, _, VT = np.linalg.svd(np.dot(A.T, B))
-                R[face[j]] += np.dot(U, VT)
-
-        # Step 3: Normalize rotations
-        for i in range(N):
-            U, _, VT = np.linalg.svd(R[i])
-            R[i] = np.dot(U, VT)
         
+        P_P_new     = {}
+        for face in F:
+            for j in range(3):
+                i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+                w1 = cotangent_weights[(i0, i1)]
+                w2 = cotangent_weights[(i0, i2)]
+                V1 = w1*(V[i0] - V[i1])
+                V2 = w2*(V[i0] - V[i2])
+                Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
+                Pi     = Pi_Pi_new[0]
+                P[i1] = V1
+                P[i2] = V2
+
+                V1_new = (V_new[i0] - V_new[i1])
+                V2_new = (V_new[i0] - V_new[i2])
+                Pi_new = Pi_Pi_new[1]
+                Pi_new[i1] = V1_new
+                Pi_new[i2] = V2_new
+
+        for face in F:
+            i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+            Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
+            Pi     = Pi_Pi_new[0]
+            Pi_new = Pi_Pi_new[1]
+            qty    = Pi.size()
+            
+            mPi     = np.zeros( (3, qty) )
+            for ind, V in mPi.items():
+                mPi[ind] = V
+
+            mPi_new = np.zeros( (3, qty) )
+            for ind, V in mPi_new.items():
+                mPi_new[ind] = V
+
+            Si = np.dot( mPi, mPi_new.T )
+
+            # Use SVD to find the optimal rotation.
+            U, _, VT = np.linalg.svd( Si )
+            R[i] = np.dot(U, VT)
+
         # Step 4: Build linear system with cotangent weights
         L = csr_matrix((N, N))
         b = np.zeros((N, 3))
-        for (i, j), w in cotangent_weights.items():
-            L[i, i] += w
-            L[j, j] += w
-            L[i, j] -= w
-            L[j, i] -= w
-            b[i] += w * (np.dot(R[i], V[j] - V[i]) + V[i])
-            b[j] += w * (np.dot(R[j], V[i] - V[j]) + V[j])
+        for face in F:
+            for j in range(3):
+                i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+                w01 = cotangent_weights[ (i0, i1) ]
+                w02 = cotangent_weights[ (i0, i2) ]
+                L[i0, i0] += w01
+                L[i0, i1] -= w01
+
+                L[i0, i0] += w02
+                L[i0, i2] -= w02
+
+                pi0 = V[i0]
+                pi1 = V[i1]
+                pi2 = V[i2]
+
+                Ri0 = R[i0]
+                Ri1 = R[i1]
+                Ri2 = R[i2]
+
+                b[i0] += 0.5*w01*np.dot( (Ri0 + Ri1), (pi0 - pi1) )
+                b[i0] += 0.5*w02*np.dot( (Ri0 + Ri2), (pi0 - pi2) )
+
 
         # Step 5: Apply fixed vertices constraints
         L = L.tocsr()
@@ -136,9 +173,18 @@ def falloff_function(distances, influence_radii):
     Returns:
     - falloff_weights: np.array of shape (num_fixed, N) containing the falloff weights.
     """
-    return np.exp(-distances / influence_radii[:, None])
+    if influence_radii is None:
+        ret = np.zeros_like( distances )
 
-def apply_proportional_displacements(V, F, fixed_vertices, fixed_positions, influence_radii):
+    elif type(influence_radii) == float:
+        ret = np.exp(-distances) / influence_radii
+
+    else:
+        ret = np.exp(-distances / influence_radii[:, None])
+
+    return ret
+
+def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radii):
     """
     Applies proportional displacements to the mesh vertices based on geodesic distances and influence radii.
     
@@ -154,21 +200,33 @@ def apply_proportional_displacements(V, F, fixed_vertices, fixed_positions, infl
     """
     distances = compute_geodesic_distances(V, F, fixed_vertices)
     falloff_weights = falloff_function(distances, influence_radii)
+    falloff_weights_2 = falloff_weights * falloff_weights
     combined_falloff_weights = falloff_weights.sum(axis=0)
-    combined_falloff_weights[combined_falloff_weights == 0] = 1  # Avoid division by zero
+
+    # Create a copy which is used for dividing the displacements combined.
+    combined_falloff_weights_filtered = combined_falloff_weights.copy()
+    combined_falloff_weights_filtered[combined_falloff_weights == 0] = 1  # Avoid division by zero
     
-    displacements = np.zeros_like(V)
-    for idx, pos in zip(fixed_vertices, fixed_positions):
-        displacement = pos - V[idx]
-        displacements += (falloff_weights[idx, :, None] * displacement)
+    displacements_arap = V_new - V
+    displacements_prop = np.zeros_like(V)
+    weight_idx = 0
+    for idx in fixed_vertices:
+        displacement = V_new[idx] - V[idx]
+        displacements_prop += falloff_weights_2[weight_idx, :, None] * displacement
+        weight_idx += 1
+    displacements_prop = displacements_prop / combined_falloff_weights_filtered[:, None]
     
-    proportional_displacements = displacements / combined_falloff_weights[:, None]
-    
-    V_new = V + proportional_displacements
+
+    weights_prop = combined_falloff_weights_filtered
+    weights_arap = 1.0 - weights_prop
+
+    displacements = displacements_prop * weights_prop[:, None] + displacements_arap * weights_arap[:, None]
+
+    V_new = V + displacements
     return V_new
 
 def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
-"""
+    """
     Executes the As-Rigid-As-Possible (ARAP) optimization with proportional displacements.
     
     Parameters:
@@ -185,14 +243,10 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     if influence_radii is None:
         influence_radii = np.ones(len(fixed_vertices))  # Default radius if none provided
     
-    V_new = V.copy()
-    
-    for iter in range(iterations):
-        # Run ARAP optimization
-        V_new = arap(V_new, F, fixed_vertices, fixed_positions)
+    V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
         
-        # Apply Proportional Displacements
-        V_new = apply_proportional_displacements(V_new, F, fixed_vertices, fixed_positions, influence_radii)
+    # Apply Proportional Displacements
+    #V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
     
     return V_new
 

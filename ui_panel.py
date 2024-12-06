@@ -27,6 +27,8 @@ if not dir in sys.path:
     
 import install_needed_packages
 
+import utils
+
 
 class PanelSettings(bpy.types.PropertyGroup):
     mode_enum : bpy.props.EnumProperty(
@@ -567,9 +569,12 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         #pdb.set_trace()
         
         # IGL precomputation
-        arap = igl.ARAP( Vs, Fs, 3, vert_inds )
+        #arap = igl.ARAP( Vs, Fs, 3, vert_inds )
         # IGL solve
-        Vs_new = arap.solve( target_positions, Vs )
+        #Vs_new = arap.solve( target_positions, Vs )
+        import pdb
+        pdb.set_trace()
+        Vs_new = utils.arap_with_proportional_displacements( Vs, Fs, vert_inds, target_positions, iterations=10, influence_radii=None)
         
         # Apply modified vertex coordinates to meshes.
         apply_to_mesh( mesh, Vs_new )
@@ -1187,7 +1192,7 @@ def on_transform_completed(obj, scene):
     mirror = obj['mirror']
     
     if mirror is None:
-        obj[symmetry] = 'NONE'
+        obj['symmetry'] = 'NONE'
         return
     
     symmetry = obj['symmetry']
