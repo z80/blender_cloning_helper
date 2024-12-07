@@ -174,6 +174,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         # Solve linear system
         V_some = spsolve(L, b)
 
+        import pdb
+        pdb.set_trace()
+
         # Fill in V_new matrix.
         idx = 0
         fixed_idx = 0
@@ -266,18 +269,31 @@ def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radi
     
     displacements_arap = V_new - V
     displacements_prop = np.zeros_like(V)
+
+    #import pdb
+    #pdb.set_trace()
+
+    N = V.shape[0]
+    N_fixed = len( fixed_vertices )
+    abs_displacements_prop_max = np.zeros( (N,) )
     weight_idx = 0
     for idx in fixed_vertices:
         displacement = V_new[idx] - V[idx]
         displacements_prop += falloff_weights_2[weight_idx, :, None] * displacement
+
+        abs_displacements_prop_max += falloff_weights_2[weight_idx, :] * np.linalg.norm( displacement )
+
         weight_idx += 1
-    displacements_prop = displacements_prop / combined_falloff_weights_filtered[:, None]
-    
+    displacements_prop    = displacements_prop / combined_falloff_weights_filtered[:, None]
+    abs_displacements_prop_max = abs_displacements_prop_max / combined_falloff_weights_filtered
 
-    weights_prop = combined_falloff_weights_filtered
-    weights_arap = 1.0 - weights_prop
+    # Compute alpha for blending between proportional and arap displacements.
+    abs_displacements_prop_max[abs_displacements_prop_max == 0] = 1  # Avoid division by zero
+    abs_displacements_prop     = np.linalg.norm( displacements_prop, axis=1 )
+    alphas_prop = abs_displacements_prop / abs_displacements_prop_max
+    alphas_arap = 1.0 - alphas_prop
 
-    displacements = displacements_prop * weights_prop[:, None] + displacements_arap * weights_arap[:, None]
+    displacements = displacements_prop * alphas_prop[:, None] + displacements_arap * alphas_arap[:, None]
 
     V_new = V + displacements
     return V_new

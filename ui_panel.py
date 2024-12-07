@@ -572,8 +572,10 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         #arap = igl.ARAP( Vs, Fs, 3, vert_inds )
         # IGL solve
         #Vs_new = arap.solve( target_positions, Vs )
-        import pdb
-        pdb.set_trace()
+        
+        #import pdb
+        #pdb.set_trace()
+
         Vs_new = utils.arap_with_proportional_displacements( Vs, Fs, vert_inds, target_positions, iterations=10, influence_radii=None)
         
         # Apply modified vertex coordinates to meshes.
