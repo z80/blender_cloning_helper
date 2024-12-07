@@ -174,8 +174,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         # Solve linear system
         V_some = spsolve(L, b)
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         # Fill in V_new matrix.
         idx = 0
@@ -183,7 +183,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
         for i in range(N):
             is_fixed = i in fixed_vertices_set
             if is_fixed:
-                v = fixed_positions[fixed_idx]
+                ind = fixed_vertex_indices[i]
+                v = fixed_positions[ind]
                 V_new[i] = v
                 fixed_idx += 1
 
@@ -319,7 +320,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
         
     # Apply Proportional Displacements
-    #V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
+    V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
     
     return V_new
 
