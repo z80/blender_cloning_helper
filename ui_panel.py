@@ -576,7 +576,7 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         #import pdb
         #pdb.set_trace()
 
-        Vs_new = utils.arap_with_proportional_displacements( Vs, Fs, vert_inds, target_positions, iterations=10, influence_radii=None)
+        Vs_new = utils.arap_with_proportional_displacements( Vs, Fs, vert_inds, target_positions, iterations=1, influence_radii=None)
         
         # Apply modified vertex coordinates to meshes.
         apply_to_mesh( mesh, Vs_new )
