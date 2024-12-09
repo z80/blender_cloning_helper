@@ -238,12 +238,48 @@ def falloff_function(distances, influence_radii):
         ret = np.zeros_like( distances )
 
     elif type(influence_radii) == float:
-        ret = np.exp(-distances) / influence_radii
+        ret = np.exp( -(distances/influence_radii)**2 )
 
     else:
-        ret = np.exp(-distances / influence_radii[:, None])
+        ret = np.exp( -(distances / influence_radii[:, None])**2 )
 
     return ret
+
+
+
+
+def inverse_distance_weighting_multiple( falloff_func, distances, power=2, epsilon=1e-3):
+    num_anchors         = distances.shape[0]
+    num_points          = distances.shape[1]
+    values              = falloff_func( distances )
+    interpolated_values = np.zeros_like( distances )
+
+
+    below_threshold_indices = np.where(distances < epsilon)
+    # Create a mask for all points
+    mask = np.full(distances.shape, True)
+    mask[below_threshold_indices] = False
+    # Get indices of points with value 1 or above by inverting the mask
+    above_or_equal_threshold_indices = np.where(mask)
+
+    for i in range(num_points):
+        # Check for exact match
+        if np.all( mask[:, i] ):
+            # Apply inverse distance weighting
+            weights = 1.0 / (distances[:, i] + epsilon)**power
+            interpolated_values[:, i] = (weights * values[:, i]) / np.sum(weights)
+
+        else:
+            exact_match_index = np.argmin(distances[:, i])
+            interpolated_values[exact_match_index, i] = 1.0
+            print( "wull weight for vertex #", i )
+            
+    return interpolated_values
+
+
+
+
+
 
 def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radii):
     """
@@ -259,8 +295,16 @@ def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radi
     Returns:
     - V_new: np.array of shape (N, 3) containing the new vertex positions after applying proportional displacements.
     """
+    def falloff_func( distances ):
+        scaled_distances = distances / influence_radii[:, None]
+        ret = falloff_function( distances, influence_radii )
+        return ret
+
+    #import pdb
+    #pdb.set_trace()
+
     distances = compute_geodesic_distances(V, F, fixed_vertices)
-    falloff_weights = falloff_function(distances, influence_radii)
+    falloff_weights = inverse_distance_weighting_multiple( falloff_func, distances )
     falloff_weights_2 = falloff_weights * falloff_weights
     combined_falloff_weights = falloff_weights.sum(axis=0)
 
@@ -276,27 +320,22 @@ def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radi
 
     N = V.shape[0]
     N_fixed = len( fixed_vertices )
-    abs_displacements_prop_max = np.zeros( (N,) )
     weight_idx = 0
     for idx in fixed_vertices:
         displacement = V_new[idx] - V[idx]
         displacements_prop += falloff_weights_2[weight_idx, :, None] * displacement
 
-        abs_displacements_prop_max += falloff_weights_2[weight_idx, :] * np.linalg.norm( displacement )
-
         weight_idx += 1
     displacements_prop    = displacements_prop / combined_falloff_weights_filtered[:, None]
-    abs_displacements_prop_max = abs_displacements_prop_max / combined_falloff_weights_filtered
 
     # Compute alpha for blending between proportional and arap displacements.
-    abs_displacements_prop_max[abs_displacements_prop_max == 0] = 1  # Avoid division by zero
-    abs_displacements_prop     = np.linalg.norm( displacements_prop, axis=1 )
-    alphas_prop = abs_displacements_prop / abs_displacements_prop_max
+    alphas_prop = falloff_weights.max( axis=0 )
     alphas_arap = 1.0 - alphas_prop
 
     displacements = displacements_prop * alphas_prop[:, None] + displacements_arap * alphas_arap[:, None]
 
     V_new = V + displacements
+    #V_new = V + displacements_prop
     return V_new
 
 def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
@@ -315,10 +354,12 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization with proportional displacements.
     """
     if influence_radii is None:
-        influence_radii = np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 5.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
-        
+    
+    #V_new = V.copy()
+    #V_new[fixed_vertices] = fixed_positions
     # Apply Proportional Displacements
     V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
     
