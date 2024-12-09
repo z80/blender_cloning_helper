@@ -354,7 +354,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization with proportional displacements.
     """
     if influence_radii is None:
-        influence_radii = 5.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
     
