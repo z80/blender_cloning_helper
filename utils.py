@@ -59,9 +59,10 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
     for iter in range(iterations):
         
         # Compute rotations
-        R = np.zeros((faces_qty, 3, 3))
+        R = np.zeros( (N, 3, 3) )
+        R_own = np.zeros( (N, 3, 3) )
         
-        P_P_new     = {}
+        P_P_new = {}
         for face in F:
             for j in range(3):
                 i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
@@ -69,61 +70,57 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
                 w2 = cotangent_weights[(i0, i2)]
                 V1 = w1*(V[i0] - V[i1])
                 V2 = w2*(V[i0] - V[i2])
-                Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
+                Pi_Pi_new = P_P_new.get( i0, ( [], [] ) )
                 Pi     = Pi_Pi_new[0]
-                Pi[i1] = V1
-                Pi[i2] = V2
+                Pi.append( V1 )
+                Pi.append( V2 )
 
                 V1_new = (V_new[i0] - V_new[i1])
                 V2_new = (V_new[i0] - V_new[i2])
                 Pi_new = Pi_Pi_new[1]
-                Pi_new[i1] = V1_new
-                Pi_new[i2] = V2_new
+                Pi_new.append( V1_new )
+                Pi_new.append( V2_new )
 
                 P_P_new[i0] = ( Pi, Pi_new )
 
-        for face_ind, face in enumerate(F):
-            i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
-            Pi_Pi_new = P_P_new.get( i0, ( {}, {} ) )
+        for vert_ind in range(N):
+            Pi_Pi_new = P_P_new.get( vert_ind, ( [], [] ) )
             Pi     = Pi_Pi_new[0]
             Pi_new = Pi_Pi_new[1]
             qty    = len(Pi)
             
             mPi     = np.zeros( (3, qty) )
             ind = 0
-            for i, Vi in Pi.items():
+            for i, Vi in enumerate(Pi):
                 mPi[:, ind] = Vi
                 ind += 1
 
             mPi_new = np.zeros( (3, qty) )
             ind = 0
-            for i, Vi in Pi_new.items():
+            for i, Vi in enumerate(Pi_new):
                 mPi_new[:, ind] = Vi
                 ind += 1
 
             Si = np.dot( mPi, mPi_new.T )
 
             # Use SVD to find the optimal rotation.
+            # It transforms original points to transformed ones the best it can.
             U, _, VT = np.linalg.svd( Si )
-            R[face_ind] = np.dot(U, VT)
+            R[vert_ind] = np.dot(U, VT)
 
         # Build linear system with cotangent weights
         L = csr_matrix((N, N))
         b = np.zeros((N, 3))
         for face_ind, face in enumerate(F):
-            Ri = R[face_ind]
-            # We don't go over all edges comint from the vertes but over faces instead.
-            # For each face the rotation matrix is the same.
-            Ri = R[face_ind]
-            Ri0 = Ri
-            Ri1 = Ri
-            Ri2 = Ri
-
             for j in range(3):
                 i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
                 i0_fixed = i0 in fixed_vertices_set
                 i1_fixed = i1 in fixed_vertices_set
                 i2_fixed = i2 in fixed_vertices_set
+
+                Ri0 = R[i0]
+                Ri1 = R[i1]
+                Ri2 = R[i2]
 
                 w01 = cotangent_weights[ (i0, i1) ]
                 w02 = cotangent_weights[ (i0, i2) ]
@@ -361,7 +358,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     #V_new = V.copy()
     #V_new[fixed_vertices] = fixed_positions
     # Apply Proportional Displacements
-    V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
+    #V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
     
     return V_new
 
