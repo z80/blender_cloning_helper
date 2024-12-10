@@ -3,44 +3,6 @@ from scipy.sparse import csr_matrix
 from scipy.sparse.linalg import spsolve
 from scipy.sparse.csgraph import dijkstra
 
-
-def get_edge_lists( V, F ):
-    """
-    For each vertex it produces the list of all other vertices 
-    it is connected with an edge.
-
-    Returns:
-    - connections, max_connections: An array of arrays of vertex indices.
-    """
-    verts = {}
-    for face in F:
-        for i in range(3):
-            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
-            vert = verts.get( i0, set() )
-            vert.add( i1 )
-            vert.add( i2 )
-            verts[i0] = vert
-
-    # Now convert it to the array.
-    connections = []
-    qty = V.shape[0]
-    max_connections = 0
-    for i in range(qty):
-        vert = verts.get( i, set() )
-        # Convertes a set ot a sorted list.
-        vert = sorted( vert )
-        connections.append( vert )
-
-        connections_qty = len(vert)
-        if connections_qty > max_connections:
-            max_connections = connections_qty
-
-
-    return connections, connections_qty
-
-
-
-
 def compute_cotangent_weights(V, F):
     """
     Computes cotangent weights for each edge in the mesh.
@@ -55,16 +17,16 @@ def compute_cotangent_weights(V, F):
     weights = {}
     for face in F:
         for i in range(3):
-            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
+            i0, i1, i2 = face[i], face[(i + 1) % 3], face[(i + 2) % 3]
             v0, v1, v2 = V[i0], V[i1], V[i2]
             edge1, edge2 = v1 - v0, v2 - v0
             angle = np.arccos(np.clip(np.dot(edge1, edge2) / (np.linalg.norm(edge1) * np.linalg.norm(edge2)), -1.0, 1.0))
-            cot_angle_2 = float(0.5 / np.tan(angle))
+            cot_angle_2 = 0.5 / np.tan(angle)
             weights[(i1, i2)] = weights.get( (i1, i2), 0) + cot_angle_2
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
+def arap(V, F, fixed_vertices, fixed_positions, iterations=10):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -80,19 +42,6 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
     """
     # Compute cotangent weights
     cotangent_weights = compute_cotangent_weights(V, F)
-    connections, max_connections_qty = get_edge_lists(V, F)
-
-    # Initialize variables
-    N         = V.shape[0]
-    faces_qty = F.shape[0]
-    V_new     = V.copy()
-
-    import pdb
-    pdb.set_trace()
-
-    for idx, abs_idx in enumerate(fixed_vertices):
-        v = fixed_positions[idx]
-        V_new[abs_idx] = v
 
     # Set of fixed vertex indices for fast lookup.
     fixed_vertices_set = set( fixed_vertices )
@@ -101,116 +50,145 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
     fixed_vertex_indices = {}
     for i, idx in enumerate( fixed_vertices ):
         fixed_vertex_indices[idx] = i
-
-    # Do the same for vertex indices. Because there are fixed vertices, when constructing 
-    # the optimization equation beed to skip fixed indices.
-    variable_vertex_indices = {}
-    idx = 0
-    for i in range(N):
-        is_fixed = i in fixed_vertices_set
-        if is_fixed:
-            continue
-        variable_vertex_indices[i] = idx
-        idx += 1
-
-    variable_verts_qty = len(variable_vertex_indices)
-
+    
+    # Initialize variables
+    N         = V.shape[0]
+    faces_qty = F.shape[0]
+    V_new     = V.copy()
+    
     for iter in range(iterations):
         
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
-        inv_R = np.zeros( (N, 3, 3) )
-        R_to_principal = np.zeros( (N, 3, 3) )
+        R_own = np.zeros( (N, 3, 3) )
+        
+        P_P_new = {}
+        for face in F:
+            for j in range(3):
+                i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+                w1 = cotangent_weights[(i0, i1)]
+                w2 = cotangent_weights[(i0, i2)]
+                V1 = w1*(V[i0] - V[i1])
+                V2 = w2*(V[i0] - V[i2])
+                Pi_Pi_new = P_P_new.get( i0, ( [], [] ) )
+                Pi     = Pi_Pi_new[0]
+                Pi.append( V1 )
+                Pi.append( V2 )
 
-        for abs_idx in range(N):
-            # All abs vert. indices this vertex is connected to.
-            vert_connections = connections[abs_idx]
-            connections_qty = len(vert_connections)
-            Pi = np.zeros( (connections_qty, 3) )
-            Pi_new = np.zeros( (connections_qty, 3) )
+                V1_new = (V_new[i0] - V_new[i1])
+                V2_new = (V_new[i0] - V_new[i2])
+                Pi_new = Pi_Pi_new[1]
+                Pi_new.append( V1_new )
+                Pi_new.append( V2_new )
 
-            V0     = V[abs_idx]
-            V0_new = V_new[abs_idx]
+                P_P_new[i0] = ( Pi, Pi_new )
+
+        for vert_ind in range(N):
+            Pi_Pi_new = P_P_new.get( vert_ind, ( [], [] ) )
+            Pi     = Pi_Pi_new[0]
+            Pi_new = Pi_Pi_new[1]
+            qty    = len(Pi)
             
-            for idx, abs_idx_other in enumerate(vert_connections):
-                V1     = V[abs_idx_other]
-                V1_new = V_new[abs_idx_other]
-                w      = cotangent_weights[(int(abs_idx), (abs_idx_other))]
-                dV     = w*(V0 - V1)
-                dV_new = w*(V0_new - V1_new)
+            mPi     = np.zeros( (3, qty) )
+            ind = 0
+            for i, Vi in enumerate(Pi):
+                mPi[:, ind] = Vi
+                ind += 1
 
-                Pi[idx] = dV
-                Pi_new[idx] = dV_new
+            mPi_new = np.zeros( (3, qty) )
+            ind = 0
+            for i, Vi in enumerate(Pi_new):
+                mPi_new[:, ind] = Vi
+                ind += 1
 
-            Si = np.dot( Pi.T, Pi_new )
+            Si = np.dot( mPi, mPi_new.T )
+
             # Use SVD to find the optimal rotation.
             # It transforms original points to transformed ones the best it can.
             U, _, VT = np.linalg.svd( Si )
-            R_old_new = np.dot(U, VT)
-            R[abs_idx] = R_old_new
-
-            # Now compute the principal directions of original vertices set.
-            #centroid = np.mean(mPi, axis=1)
-            #centered_points = mPi - centroid[:, None]
-            #M_cov = np.cov( centered_points )
-            # Eigenvalue-eigenvector decomposition
-            #eigenvalues, eigenvectors = np.linalg.eigh(M_cov)
-            #sorted_indices = np.argsort(eigenvalues)
-            #ei = eigenvectors[:, sorted_indices]
-            # Make the smallest eigenvalue axis the last.
-            #R_z = np.array( [ ei[:, 2], ei[:, 1], ei[:, 0] ] )
-
-            # Now, instead of what they do in ARAP paper, 
-            # I want to do a different thing.
-            # I want to convert new points P_new to original ones.
-            # And then I want to convert both to this principal axes.
-            # Then, I want to scale the last axis like 1000 times so that 
-            # it doesn't change the local shape.
-            #inv_R[vert_ind] = R_old_new.T
-            #R_to_principal[vert_ind] = R_z
+            R[vert_ind] = np.dot(U, VT)
 
         # Build linear system with cotangent weights
-        L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
-        B = np.zeros( (variable_verts_qty, 3) )
-        for abs_idx, var_idx in variable_vertex_indices.items():
-            Vi = V[abs_idx]
-            Ri = R[abs_idx]
-            # current vertex cannot be fixed at its index is taken from 
-            # variable vertex indices.
-            # However, vertices it is connected to can be fixed.
-            vert_connections = connections[abs_idx]
-            for abs_idx_other in vert_connections:
-                Vj = V[abs_idx_other]
-                Rj = R[abs_idx_other]
-                # Get cotangent weight for this edge.
-                w        = cotangent_weights[(int(abs_idx), int(abs_idx_other))]
-                # Check if this other vertex is fixed.
-                is_fixed = abs_idx_other in fixed_vertices_set
-                if is_fixed:
-                    B[var_idx] += w*Vj
+        L = csr_matrix((N, N))
+        b = np.zeros((N, 3))
+        for face_ind, face in enumerate(F):
+            for j in range(3):
+                i0, i1, i2 = face[j], face[(j + 1) % 3], face[(j + 2) % 3]
+                i0_fixed = i0 in fixed_vertices_set
+                i1_fixed = i1 in fixed_vertices_set
+                i2_fixed = i2 in fixed_vertices_set
 
+                Ri0 = R[i0]
+                Ri1 = R[i1]
+                Ri2 = R[i2]
+
+                w01 = cotangent_weights[ (i0, i1) ]
+                w02 = cotangent_weights[ (i0, i2) ]
+                if i0_fixed:
+                    vert_idx = fixed_vertex_indices[i0]
+                    p0       = fixed_positions[vert_idx]
+                    v        = w01 * p0
+                    b[i0]   -= v
                 else:
-                    var_idx_other = variable_vertex_indices[abs_idx_other]
-                    L[var_idx, var_idx_other] += -w
+                    L[i0, i0] += w01
+                    L[i0, i0] += w02
 
-                L[var_idx, var_idx] += w
-                B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Vi - Vj) )
+                if i1_fixed:
+                    vert_idx = fixed_vertex_indices[i1]
+                    p1       = fixed_positions[vert_idx]
+                    v        = w01 * p1
+                    b[i0]   += v
+                else:
+                    L[i0, i1] -= w01
 
-       
+                if i2_fixed:
+                    vert_idx = fixed_vertex_indices[i2]
+                    p2       = fixed_positions[vert_idx]
+                    v        = w02 * p2
+                    b[i0]   += v
+                else:
+                    L[i0, i2] -= w02
+
+                pi0 = V[i0]
+                pi1 = V[i1]
+                pi2 = V[i2]
+
+                v1 = 0.5*w01*np.dot( (Ri0 + Ri1), (pi0 - pi1) )
+                v2 = 0.5*w02*np.dot( (Ri0 + Ri2), (pi0 - pi2) )
+                b[i0] += v1 + v2
+
+        # Remove rows in both 'L' and 'b' which correspond to fixed indices.
+        b = np.delete( b, fixed_vertices, axis=0 )
+        # For csr_matrix it is only possible to keep, not remove. Need index inversion for that.
+        # Compute indices to keep
+        all_indices = np.arange(N)
+        keep_indices = np.delete(all_indices, fixed_vertices)
+        # Filter the rows
+        L = L[keep_indices, :]
+        # In L also delete columns.
+        L = L[:, keep_indices]
+        
         # Solve linear system
-        V_some = spsolve(L, B)
+        V_some = spsolve(L, b)
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         # Fill in V_new matrix.
-        for abs_idx, var_idx in variable_vertex_indices.items():
-            v = V_some[var_idx]
-            V_new[abs_idx] = v
+        idx = 0
+        fixed_idx = 0
+        for i in range(N):
+            is_fixed = i in fixed_vertices_set
+            if is_fixed:
+                ind = fixed_vertex_indices[i]
+                v = fixed_positions[ind]
+                V_new[i] = v
+                fixed_idx += 1
 
-        for idx, abs_idx in enumerate(fixed_vertex_indices):
-            v = fixed_positions[idx]
-            V_new[abs_idx] = v
+            else:
+                v = V_some[idx]
+                V_new[i] = v
+                idx += 1
 
     return V_new
 
