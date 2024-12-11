@@ -114,8 +114,19 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
         idx += 1
 
     variable_verts_qty = len(variable_vertex_indices)
+    fixed_verts_qty    = len(fixed_vertices)
+
+    # Define start positions
+    start_positions = np.zeros( (fixed_verts_qty, 3) )
+    for idx, abs_idx in enumerate(fixed_vertices):
+        v = V[abs_idx]
+        start_positions[idx] = v
 
     for iteration in range(iterations):
+        
+        alpha = float(iteration+1)/float(iterations)
+        target_positions = alpha*(fixed_positions - start_positions) + start_positions
+
         
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
