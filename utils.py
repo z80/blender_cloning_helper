@@ -87,8 +87,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
     faces_qty = F.shape[0]
     V_new     = V.copy()
 
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
 
     for idx, abs_idx in enumerate(fixed_vertices):
         v = fixed_positions[idx]
@@ -115,7 +115,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
 
     variable_verts_qty = len(variable_vertex_indices)
 
-    for iter in range(iterations):
+    for iteration in range(iterations):
         
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
@@ -173,44 +173,49 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
         L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
         B = np.zeros( (variable_verts_qty, 3) )
         for abs_idx, var_idx in variable_vertex_indices.items():
-            Vi = V[abs_idx]
+            Pi     = V[abs_idx]
             Ri = R[abs_idx]
             # current vertex cannot be fixed at its index is taken from 
             # variable vertex indices.
             # However, vertices it is connected to can be fixed.
             vert_connections = connections[abs_idx]
             for abs_idx_other in vert_connections:
-                Vj = V[abs_idx_other]
+                Pj = V[abs_idx_other]
                 Rj = R[abs_idx_other]
                 # Get cotangent weight for this edge.
                 w        = cotangent_weights[(int(abs_idx), int(abs_idx_other))]
                 # Check if this other vertex is fixed.
                 is_fixed = abs_idx_other in fixed_vertices_set
                 if is_fixed:
-                    B[var_idx] += w*Vj
+                    # This should be the fixed vertex position.
+                    vert_idx = fixed_vertex_indices[abs_idx_other]
+                    Pj_new   = fixed_positions[vert_idx]
+                    #Pj_new = V_new[abs_idx_other]
+                    B[var_idx] += w*Pj_new
 
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
                     L[var_idx, var_idx_other] += -w
 
                 L[var_idx, var_idx] += w
-                B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Vi - Vj) )
+                B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
 
        
         # Solve linear system
         V_some = spsolve(L, B)
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         # Fill in V_new matrix.
         for abs_idx, var_idx in variable_vertex_indices.items():
             v = V_some[var_idx]
             V_new[abs_idx] = v
-
-        for idx, abs_idx in enumerate(fixed_vertex_indices):
-            v = fixed_positions[idx]
-            V_new[abs_idx] = v
+        
+        # Fixed positions are not touched at all.
+        #for idx, abs_idx in enumerate(fixed_vertex_indices):
+        #    v = fixed_positions[idx]
+        #    V_new[abs_idx] = v
 
     return V_new
 
