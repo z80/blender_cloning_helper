@@ -147,7 +147,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
             # It transforms original points to transformed ones the best it can.
             U, _, VT = np.linalg.svd( Si )
             R_old_new = np.dot(U, VT)
-            R[abs_idx] = R_old_new
+            R[abs_idx] = R_old_new.T
 
             # Now compute the principal directions of original vertices set.
             #centroid = np.mean(mPi, axis=1)
@@ -173,7 +173,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
         L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
         B = np.zeros( (variable_verts_qty, 3) )
         for abs_idx, var_idx in variable_vertex_indices.items():
-            Pi     = V[abs_idx]
+            Pi = V[abs_idx]
             Ri = R[abs_idx]
             # current vertex cannot be fixed at its index is taken from 
             # variable vertex indices.
@@ -189,9 +189,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
                 if is_fixed:
                     # This should be the fixed vertex position.
                     vert_idx = fixed_vertex_indices[abs_idx_other]
-                    Pj_new   = fixed_positions[vert_idx]
+                    Pj_fixed   = fixed_positions[vert_idx]
                     #Pj_new = V_new[abs_idx_other]
-                    B[var_idx] += w*Pj_new
+                    B[var_idx] += w*Pj_fixed
 
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
