@@ -62,9 +62,8 @@ def get_rigid_transform( V, fixed_vertices, fixed_positions ):
 
 def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, epsilon=1.0e-3 ):
     """
-    I believe, this one implements something similar to Thin-Plate Splines but 
-    in 3d the best I understand the concept of TPS except I use 
-    geodesic distance in place of euclidean distance.
+    I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
+    best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
     """
 
     #import pdb
@@ -103,7 +102,7 @@ def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, 
 
         new_positions[vert_idx] += displacement
 
-    return new_positions
+    return new_positions, distances
 
 
 
@@ -130,7 +129,7 @@ def compute_cotangent_weights(V, F):
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
+def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -151,7 +150,11 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2):
     # Initialize variables
     N         = V.shape[0]
     faces_qty = F.shape[0]
-    V_new     = V.copy()
+
+    if V_initial is None:
+        V_new = V.copy()
+    else:
+        V_new = V_initial.copy()
 
     #import pdb
     #pdb.set_trace()
@@ -382,7 +385,7 @@ def inverse_distance_weighting_multiple( falloff_func, distances, power=2, epsil
 
 
 
-def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radii):
+def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii ):
     """
     Applies proportional displacements to the mesh vertices based on geodesic distances and influence radii.
     
@@ -403,8 +406,7 @@ def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radi
 
     #import pdb
     #pdb.set_trace()
-
-    distances = compute_geodesic_distances(V, F, fixed_vertices)
+    
     falloff_weights = inverse_distance_weighting_multiple( falloff_func, distances )
     falloff_weights_2 = falloff_weights * falloff_weights
     combined_falloff_weights = falloff_weights.sum(axis=0)
@@ -413,30 +415,15 @@ def apply_proportional_displacements(V, V_new, F, fixed_vertices, influence_radi
     combined_falloff_weights_filtered = combined_falloff_weights.copy()
     combined_falloff_weights_filtered[combined_falloff_weights == 0] = 1  # Avoid division by zero
     
-    displacements_arap = V_new - V
-    displacements_prop = np.zeros_like(V)
-
     #import pdb
     #pdb.set_trace()
-
-    N = V.shape[0]
-    N_fixed = len( fixed_vertices )
-    weight_idx = 0
-    for idx in fixed_vertices:
-        displacement = V_new[idx] - V[idx]
-        displacements_prop += falloff_weights_2[weight_idx, :, None] * displacement
-
-        weight_idx += 1
-    displacements_prop    = displacements_prop / combined_falloff_weights_filtered[:, None]
 
     # Compute alpha for blending between proportional and arap displacements.
     alphas_prop = falloff_weights.max( axis=0 )
     alphas_arap = 1.0 - alphas_prop
 
-    displacements = displacements_prop * alphas_prop[:, None] + displacements_arap * alphas_arap[:, None]
+    V_new = V_idt * alphas_prop[:, None] + V_arap * alphas_arap[:, None]
 
-    V_new = V + displacements
-    #V_new = V + displacements_prop
     return V_new
 
 def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
@@ -457,13 +444,14 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     if influence_radii is None:
         influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
-    V_new = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
-    #V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
+    V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
+    V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, V_initial=V_idt)
     
     #V_new = V.copy()
     #V_new[fixed_vertices] = fixed_positions
     # Apply Proportional Displacements
-    #V_new = apply_proportional_displacements( V, V_new, F, fixed_vertices, influence_radii)
+    V_new = apply_proportional_displacements( V_idt, V_arap, distances, influence_radii )
+    #V_new = V_arap
     
     return V_new
 
