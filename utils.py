@@ -39,6 +39,72 @@ def get_edge_lists( V, F ):
     return connections, connections_qty
 
 
+def get_rigid_transform( V, fixed_vertices, fixed_positions ):
+    """
+    Returns rotation and translation of the best rigid transform.
+    """
+    start_positions = V[fixed_vertices]
+    start_origin    = np.mean( start_positions, axis=0 )
+    target_origin   = np.mean( fixed_positions, axis=0 )
+
+    start_deltas    = start_positions - start_origin
+    target_deltas   = fixed_positions - target_origin
+
+    S = np.dot( start_deltas.T, target_deltas )
+    U, _, VT = np.linalg.svd( S )
+    inv_R = np.dot(U, VT)
+    R = inv_R.T
+
+    T = target_origin - start_origin
+
+    return (R, T)
+
+
+def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, epsilon=1.0e-3 ):
+    """
+    I believe, this one implements something similar to Thin-Plate Splines but 
+    in 3d the best I understand the concept of TPS except I use 
+    geodesic distance in place of euclidean distance.
+    """
+
+    #import pdb
+    #pdb.set_trace()
+
+    R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
+    # distances dims = fixed_qty by total_qty 
+    distances = compute_geodesic_distances(V, F, fixed_vertices)
+    # Indices where the distance is very small.
+    below_threshold_indices = np.where(distances < epsilon)
+    # Create a mask for all points
+    mask = np.full(distances.shape, True)
+    mask[below_threshold_indices] = False
+ 
+    # Applying rigid transform, i.e. rotaton and translation.
+    new_positions = np.dot( R, V.T ).T + T
+
+    # Compute displacements for fixed positions.
+    start_positions = new_positions[fixed_vertices]
+    displacements   = fixed_positions - start_positions
+
+    num_points = V.shape[0]
+
+    for vert_idx in range(num_points):
+        # Check for exact match
+        if np.all( mask[:, vert_idx] ):
+            # Apply inverse distance weighting
+            weights = 1.0 / (distances[:, vert_idx] + epsilon)**power
+            sum_weights = np.sum(weights)
+            displacement_per_target = (weights[:, None] * displacements)
+            displacement = np.sum( displacement_per_target, axis=0 ) / sum_weights
+
+        else:
+            exact_match_index = np.argmin(distances[:, vert_idx])
+            displacement = displacements[exact_match_index]
+
+        new_positions[vert_idx] += displacement
+
+    return new_positions
+
 
 
 def compute_cotangent_weights(V, F):
@@ -391,7 +457,8 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     if influence_radii is None:
         influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
-    V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
+    V_new = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
+    #V_new = arap(V, F, fixed_vertices, fixed_positions, iterations)
     
     #V_new = V.copy()
     #V_new[fixed_vertices] = fixed_positions
