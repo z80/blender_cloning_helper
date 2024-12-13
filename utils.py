@@ -278,6 +278,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
+        inv_R = np.zeros( (N, 3, 3) )
 
         for abs_idx in range(N):
             # All abs vert. indices this vertex is connected to.
@@ -303,8 +304,10 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
             # Use SVD to find the optimal rotation.
             # It transforms original points to transformed ones the best it can.
             U, _, VT = np.linalg.svd( Si )
-            R_old_new = np.dot(U, VT)
-            R[abs_idx] = R_old_new.T
+            R_new_old = np.dot(U, VT)
+            R_old_new = R_new_old.T
+            R[abs_idx] = R_old_new
+            inv_R[abs_idx] = R_new_old
 
         # Build linear system with cotangent weights
         L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
@@ -317,6 +320,11 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
         for abs_idx, var_idx in variable_vertex_indices.items():
             Pi = V[abs_idx]
             Ri = R[abs_idx]
+
+            R_new_old_i = inv_R[abs_idx]
+            R_old_to_principal = R_to_principal[abs_idx]
+            R_adj = np.dot( R_old_to_principal, R_new_old_i )
+
             # current vertex cannot be fixed at its index is taken from 
             # variable vertex indices.
             # However, vertices it is connected to can be fixed.
@@ -337,6 +345,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
+                    #v = np.dot( R_adj, v )
                     B3[var_idx3]   = v[0]
                     B3[var_idx3+1] = v[1]
                     B3[var_idx3+2] = v[2]
@@ -347,21 +356,21 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                     var_idx3 = var_idx*3
                     var_idx_other3 = var_idx_other*3
-                    L3[var_idx3,   var_idx_other3]   -= w
-                    L3[var_idx3+1, var_idx_other3+1] -= w
-                    L3[var_idx3+2, var_idx_other3+2] -= w
+                    v = np.identity( 3 ) * w
+                    #v = np.dot( R_adj, v )
+                    L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= v
 
                 L[var_idx, var_idx] += w
                 B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
 
                 var_idx3 = var_idx*3
-                L3[var_idx3,   var_idx3]   += w
-                L3[var_idx3+1, var_idx3+1] += w
-                L3[var_idx3+2, var_idx3+2] += w
+                v = np.identity( 3 ) * w
+                #v = np.dot( R_adj, v )
+                L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += v
+
                 v = 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
-                B3[var_idx3]   += v[0]
-                B3[var_idx3+1] += v[1]
-                B3[var_idx3+2] += v[2]
+                #v = np.dot( R_adj, v )
+                B3[var_idx3:(var_idx3+3)] += v
 
 
        
