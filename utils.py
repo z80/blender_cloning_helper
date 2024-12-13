@@ -82,28 +82,24 @@ def get_vertex_bases( V, F ):
             face_normals[face_idx] = normal
 
     verts_qty = V.shape[0]
-    normals_per_vert = np.zeros( (verts_qty,) )
-    vert_normals     = np.zeros( (verts_qty, 3) )
+    vert_normals = np.zeros( (verts_qty, 3) )
 
     for face_idx, face in enumerate(F):
         i0, i1, i2 = int(face[0]), int(face[1]), int(face[2])
         face_normal = face_normals[face_idx]
-
         vert_normals[i0] += face_normal
-        normals_per_vert[i0] += 1
-
         vert_normals[i1] += face_normal
-        normals_per_vert[i1] += 1
-
         vert_normals[i2] += face_normal
-        normals_per_vert[i2] += 1
-
 
     bases = np.zeros( (verts_qty, 3, 3) )
 
     for vert_idx in range(verts_qty):
-        qty = normals_per_vert[vert_idx]
-        norm = vert_normals[vert_idx] / qty
+        norm = vert_normals[vert_idx]
+        abs_norm = np.linalg.norm( norm )
+        if abs_norm > 1.0e-6:
+            norm = norm / abs_norm
+        else:
+            norm = np.array( [1.0, 0.0, 0.0] )
 
         b = _basis_from_normal( norm )
         bases[vert_idx] = b.T
@@ -117,8 +113,11 @@ def _basis_from_normal( n ):
     abs_n = np.abs( n )
     sorted_indices = np.argsort(-abs_n)  # Sort in descending order
     a, b, c = n[sorted_indices[0]], n[sorted_indices[1]], n[sorted_indices[2]]
-    swapped = np.array([-b, a, c])
-    
+    swapped = np.zeros( (3,) )
+    swapped[sorted_indices[0]] = -b
+    swapped[sorted_indices[1]] = a
+    swapped[sorted_indices[2]] = c
+
     # Gram-Schmidt orthogonalization
     tangent1 = swapped - np.dot(swapped, n) * n  # Remove component along avg_normal
     tangent1 /= np.linalg.norm(tangent1)  # Normalize
@@ -345,7 +344,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
-                    #v = np.dot( R_adj, v )
+                    v = np.dot( R_adj, v )
                     B3[var_idx3]   = v[0]
                     B3[var_idx3+1] = v[1]
                     B3[var_idx3+2] = v[2]
@@ -357,7 +356,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
                     var_idx3 = var_idx*3
                     var_idx_other3 = var_idx_other*3
                     v = np.identity( 3 ) * w
-                    #v = np.dot( R_adj, v )
+                    v = np.dot( R_adj, v )
                     L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= v
 
                 L[var_idx, var_idx] += w
@@ -365,11 +364,11 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                 var_idx3 = var_idx*3
                 v = np.identity( 3 ) * w
-                #v = np.dot( R_adj, v )
+                v = np.dot( R_adj, v )
                 L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += v
 
                 v = 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
-                #v = np.dot( R_adj, v )
+                v = np.dot( R_adj, v )
                 B3[var_idx3:(var_idx3+3)] += v
 
 
