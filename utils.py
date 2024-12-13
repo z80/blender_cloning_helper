@@ -60,6 +60,80 @@ def get_rigid_transform( V, fixed_vertices, fixed_positions ):
     return (R, T)
 
 
+
+
+def get_vertex_bases( V, F ):
+    """
+    It first computes average normals for each vertex.
+    Then, it compites a basis converting from the world ref. frame to a 
+    vertex ref. frame where the normal is the first basis vector.
+    """
+    faces_qty = F.shape[0]
+    face_normals = np.zeros( (faces_qty, 3) )
+    for face_idx, face in enumerate(F):
+        for i in range(3):
+            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
+            v0, v1, v2 = V[i0], V[i1], V[i2]
+
+            edge1 = v1 - v0
+            edge2 = v2 - v0
+            normal = np.cross(edge1, edge2)
+
+            face_normals[face_idx] = normal
+
+    verts_qty = V.shape[0]
+    normals_per_vert = np.zeros( (verts_qty,) )
+    vert_normals     = np.zeros( (verts_qty, 3) )
+
+    for face_idx, face in enumerate(F):
+        i0, i1, i2 = int(face[0]), int(face[1]), int(face[2])
+        face_normal = face_normals[face_idx]
+
+        vert_normals[i0] += face_normal
+        normals_per_vert[i0] += 1
+
+        vert_normals[i1] += face_normal
+        normals_per_vert[i1] += 1
+
+        vert_normals[i2] += face_normal
+        normals_per_vert[i2] += 1
+
+
+    bases = np.zeros( (verts_qty, 3, 3) )
+
+    for vert_idx in range(verts_qty):
+        qty = normals_per_vert[vert_idx]
+        norm = vert_normals[vert_idx] / qty
+
+        b = _basis_from_normal( norm )
+        bases[vert_idx] = b.T
+
+    return bases
+
+
+
+
+def _basis_from_normal( n ):
+    abs_n = np.abs( n )
+    sorted_indices = np.argsort(-abs_n)  # Sort in descending order
+    a, b, c = n[sorted_indices[0]], n[sorted_indices[1]], n[sorted_indices[2]]
+    swapped = np.array([-b, a, c])
+    
+    # Gram-Schmidt orthogonalization
+    tangent1 = swapped - np.dot(swapped, n) * n  # Remove component along avg_normal
+    tangent1 /= np.linalg.norm(tangent1)  # Normalize
+    
+    # Compute the third basis vector
+    tangent2 = np.cross(n, tangent1)
+    tangent2 /= np.linalg.norm(tangent2)  # Normalize
+
+    basis = np.stack( [n, tangent1, tangent2], axis=0 )
+    return basis
+
+
+
+
+
 def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
@@ -172,7 +246,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
         fixed_vertex_indices[idx] = i
 
     # Do the same for vertex indices. Because there are fixed vertices, when constructing 
-    # the optimization equation beed to skip fixed indices.
+    # the optimization equation need to skip fixed indices.
     variable_vertex_indices = {}
     idx = 0
     for i in range(N):
@@ -191,16 +265,19 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
         v = V[abs_idx]
         start_positions[idx] = v
 
+    # Convertsions from unmodified mesh to the ref. frame where vertex normal 
+    # is the first coordinate.
+    R_to_principal = get_vertex_bases(V, F )
+
+
+    # Iteratively converge.
     for iteration in range(iterations):
         
         alpha = float(iteration+1)/float(iterations)
         target_positions = alpha*(fixed_positions - start_positions) + start_positions
 
-        
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
-        inv_R = np.zeros( (N, 3, 3) )
-        R_to_principal = np.zeros( (N, 3, 3) )
 
         for abs_idx in range(N):
             # All abs vert. indices this vertex is connected to.
@@ -229,29 +306,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
             R_old_new = np.dot(U, VT)
             R[abs_idx] = R_old_new.T
 
-            # Now compute the principal directions of original vertices set.
-            #centroid = np.mean(mPi, axis=1)
-            #centered_points = mPi - centroid[:, None]
-            #M_cov = np.cov( centered_points )
-            # Eigenvalue-eigenvector decomposition
-            #eigenvalues, eigenvectors = np.linalg.eigh(M_cov)
-            #sorted_indices = np.argsort(eigenvalues)
-            #ei = eigenvectors[:, sorted_indices]
-            # Make the smallest eigenvalue axis the last.
-            #R_z = np.array( [ ei[:, 2], ei[:, 1], ei[:, 0] ] )
-
-            # Now, instead of what they do in ARAP paper, 
-            # I want to do a different thing.
-            # I want to convert new points P_new to original ones.
-            # And then I want to convert both to this principal axes.
-            # Then, I want to scale the last axis like 1000 times so that 
-            # it doesn't change the local shape.
-            #inv_R[vert_ind] = R_old_new.T
-            #R_to_principal[vert_ind] = R_z
-
         # Build linear system with cotangent weights
         L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
         B = np.zeros( (variable_verts_qty, 3) )
+        
+        dims3 = variable_verts_qty*3
+        L3 = csr_matrix( (dims3, dims3) )
+        B3 = np.zeros( (dims3,) )
+
         for abs_idx, var_idx in variable_vertex_indices.items():
             Pi = V[abs_idx]
             Ri = R[abs_idx]
@@ -273,19 +335,43 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
                     #Pj_new = V_new[abs_idx_other]
                     B[var_idx] += w*Pj_fixed
 
+                    var_idx3 = var_idx*3
+                    v = w*Pj_fixed
+                    B3[var_idx3]   = v[0]
+                    B3[var_idx3+1] = v[1]
+                    B3[var_idx3+2] = v[2]
+
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
                     L[var_idx, var_idx_other] += -w
 
+                    var_idx3 = var_idx*3
+                    var_idx_other3 = var_idx_other*3
+                    L3[var_idx3,   var_idx_other3]   -= w
+                    L3[var_idx3+1, var_idx_other3+1] -= w
+                    L3[var_idx3+2, var_idx_other3+2] -= w
+
                 L[var_idx, var_idx] += w
                 B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
+
+                var_idx3 = var_idx*3
+                L3[var_idx3,   var_idx3]   += w
+                L3[var_idx3+1, var_idx3+1] += w
+                L3[var_idx3+2, var_idx3+2] += w
+                v = 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
+                B3[var_idx3]   += v[0]
+                B3[var_idx3+1] += v[1]
+                B3[var_idx3+2] += v[2]
+
 
        
         # Solve linear system
         V_some = spsolve(L, B)
 
-        #import pdb
-        #pdb.set_trace()
+        V_some3 = spsolve(L3, B3)
+
+        import pdb
+        pdb.set_trace()
 
         # Fill in V_new matrix.
         for abs_idx, var_idx in variable_vertex_indices.items():
