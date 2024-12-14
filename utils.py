@@ -202,7 +202,7 @@ def compute_cotangent_weights(V, F):
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
+def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=1.0):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -268,6 +268,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
     # is the first coordinate.
     R_to_principal = get_vertex_bases(V, F )
 
+    # Per-coordinate importance.
+    A_scale = np.identity( 3 )
+    A_scale[0,0] = normal_importance
 
     # Iteratively converge.
     for iteration in range(iterations):
@@ -321,8 +324,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
             Ri = R[abs_idx]
 
             R_new_old_i = inv_R[abs_idx]
-            R_old_to_principal = R_to_principal[abs_idx]
-            R_adj = np.dot( R_old_to_principal, R_new_old_i )
+            R_old_to_principal_i = R_to_principal[abs_idx]
+            A_i = np.dot( R_old_to_principal_i, R_new_old_i )
+            A_i = np.dot( A_scale, A_i )
+
+            A_i = R_new_old_i
+            A_i = np.identity( 3 )
+            AtA_i = np.dot( A_i.T, A_i )
+
 
             # current vertex cannot be fixed at its index is taken from 
             # variable vertex indices.
@@ -331,8 +340,23 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
             for abs_idx_other in vert_connections:
                 Pj = V[abs_idx_other]
                 Rj = R[abs_idx_other]
+
+                R_new_old_j = inv_R[abs_idx_other]
+                R_old_to_principal_j = R_to_principal[abs_idx_other]
+                A_j = np.dot( R_old_to_principal_j, R_new_old_j )
+                A_j = np.dot( A_scale, A_j )
+                
+                A_j = R_new_old_j
+                A_j = np.identity( 3 )
+                AtA_j = np.dot( A_j.T, A_j )
+
                 # Get cotangent weight for this edge.
-                w        = cotangent_weights[(int(abs_idx), int(abs_idx_other))]
+                w = cotangent_weights[(int(abs_idx), int(abs_idx_other))]
+
+    
+                A_left = w * ( AtA_i + AtA_j )
+                A_right = w * ( np.dot(A_i, Ri) + np.dot(A_j, Rj) )
+
                 # Check if this other vertex is fixed.
                 is_fixed = abs_idx_other in fixed_vertices_set
                 if is_fixed:
@@ -344,7 +368,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
-                    v = np.dot( R_adj, v )
+                    v = np.dot( A_left, Pj_fixed )
                     B3[var_idx3]   = v[0]
                     B3[var_idx3+1] = v[1]
                     B3[var_idx3+2] = v[2]
@@ -355,20 +379,15 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
                     var_idx3 = var_idx*3
                     var_idx_other3 = var_idx_other*3
-                    v = np.identity( 3 ) * w
-                    v = np.dot( R_adj, v )
-                    L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= v
+                    L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= A_left
 
                 L[var_idx, var_idx] += w
                 B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
 
                 var_idx3 = var_idx*3
-                v = np.identity( 3 ) * w
-                v = np.dot( R_adj, v )
-                L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += v
+                L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += A_left
 
-                v = 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
-                v = np.dot( R_adj, v )
+                v = np.dot( A_right, (Pi - Pj) )
                 B3[var_idx3:(var_idx3+3)] += v
 
 
@@ -378,13 +397,17 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None):
 
         V_some3 = spsolve(L3, B3)
 
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         # Fill in V_new matrix.
         for abs_idx, var_idx in variable_vertex_indices.items():
-            v = V_some[var_idx]
-            V_new[abs_idx] = v
+            #v = V_some[var_idx]
+            #V_new[abs_idx] = v
+            var_idx3 = var_idx*3
+            V_new[abs_idx][0] = V_some3[var_idx3]
+            V_new[abs_idx][1] = V_some3[var_idx3+1]
+            V_new[abs_idx][2] = V_some3[var_idx3+2]
         
         # Fixed positions are not touched at all.
         #for idx, abs_idx in enumerate(fixed_vertex_indices):
@@ -547,7 +570,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     V_new = apply_proportional_displacements( V_idt, V_arap, distances, influence_radii )
     #V_new = V_arap
     
-    return V_new
+    return V_arap
 
 # Example usage
 # V = np.array([...]) # Nx3 array of vertices
