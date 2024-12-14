@@ -330,6 +330,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
             A_i = R_new_old_i
             A_i = np.identity( 3 )
+            #A_i = Ri.T
             AtA_i = np.dot( A_i.T, A_i )
 
 
@@ -348,6 +349,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
                 
                 A_j = R_new_old_j
                 A_j = np.identity( 3 )
+                #A_j = Rj.T
                 AtA_j = np.dot( A_j.T, A_j )
 
                 # Get cotangent weight for this edge.
@@ -369,9 +371,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
                     v = np.dot( A_left, Pj_fixed )
-                    B3[var_idx3]   = v[0]
-                    B3[var_idx3+1] = v[1]
-                    B3[var_idx3+2] = v[2]
+                    B3[var_idx3:(var_idx3+3)] += v
 
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
