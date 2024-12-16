@@ -202,7 +202,7 @@ def compute_cotangent_weights(V, F):
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=1.0):
+def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=5.0):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -328,8 +328,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
             A_i = np.dot( R_old_to_principal_i, R_new_old_i )
             A_i = np.dot( A_scale, A_i )
 
-            A_i = R_new_old_i
-            A_i = np.identity( 3 )
+            #A_i = R_new_old_i
+            #A_i = np.identity( 3 )
             #A_i = Ri.T
             AtA_i = np.dot( A_i.T, A_i )
 
@@ -347,8 +347,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
                 A_j = np.dot( R_old_to_principal_j, R_new_old_j )
                 A_j = np.dot( A_scale, A_j )
                 
-                A_j = R_new_old_j
-                A_j = np.identity( 3 )
+                #A_j = R_new_old_j
+                #A_j = np.identity( 3 )
                 #A_j = Rj.T
                 AtA_j = np.dot( A_j.T, A_j )
 
@@ -357,7 +357,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
     
                 A_left = w * ( AtA_i + AtA_j )
-                A_right = w * ( np.dot(A_i, Ri) + np.dot(A_j, Rj) )
+                A_right = w * ( np.dot(AtA_i, Ri) + np.dot(AtA_j, Rj) )
 
                 # Check if this other vertex is fixed.
                 is_fixed = abs_idx_other in fixed_vertices_set
