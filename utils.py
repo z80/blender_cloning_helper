@@ -202,7 +202,7 @@ def compute_cotangent_weights(V, F):
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=5.0):
+def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=2.5):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
