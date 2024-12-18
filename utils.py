@@ -210,6 +210,8 @@ def compute_normal_importances( V, F, fixed_vertices, max_importance, min_import
     distances = compute_geodesic_distances(V, F, fixed_vertices)
     weights = falloff_func( distances, influence_radii )
     weights = np.max( weights, axis=0 )
+    weights = 1.0 - weights
+
     importances = (max_importance - min_importance) * weights + min_importance
     return importances
 
@@ -229,9 +231,6 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
     Returns:
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization.
     """
-    if influence_radii is None:
-        influence_radii = 5.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
-
     # Compute geodesic distances and influences for all vertices.
     importances = compute_normal_importances( V, F, fixed_vertices, max_importance, min_importance, influence_radii, falloff_func )
  
@@ -299,7 +298,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
 
         for abs_idx in range(N):
             # Apply per-vertex importance.
-            A_scale[0, 0] = 5.0 #float( importances[abs_idx] )
+            A_scale[0, 0] = float( importances[abs_idx] )
 
             # All abs vert. indices this vertex is connected to.
             vert_connections = connections[abs_idx]
@@ -384,6 +383,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
                     vert_idx = fixed_vertex_indices[abs_idx_other]
                     Pj_fixed   = fixed_positions[vert_idx]
                     #Pj_new = V_new[abs_idx_other]
+                    
                     #B[var_idx] += w*Pj_fixed
 
                     var_idx3 = var_idx*3
@@ -561,7 +561,7 @@ def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii )
 
     return V_new
 
-def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
+def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=2, influence_radii=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization with proportional displacements.
     
@@ -577,7 +577,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization with proportional displacements.
     """
     if influence_radii is None:
-        influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 2.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
     V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, V_initial=V_idt)
@@ -601,7 +601,7 @@ def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, i
     V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
     
     # This ARAP is with importance falloff.
-    max_importance = 5.0
+    max_importance = 10.0
     min_importance = 0.1
     V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func=falloff_function, V_initial=V_idt)
 
