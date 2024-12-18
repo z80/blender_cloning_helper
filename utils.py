@@ -366,7 +366,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
                     vert_idx = fixed_vertex_indices[abs_idx_other]
                     Pj_fixed   = fixed_positions[vert_idx]
                     #Pj_new = V_new[abs_idx_other]
-                    B[var_idx] += w*Pj_fixed
+                    
+                    #B[var_idx] += w*Pj_fixed
 
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
@@ -375,14 +376,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
-                    L[var_idx, var_idx_other] += -w
+                    #L[var_idx, var_idx_other] += -w
 
                     var_idx3 = var_idx*3
                     var_idx_other3 = var_idx_other*3
                     L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= A_left
 
-                L[var_idx, var_idx] += w
-                B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
+                #L[var_idx, var_idx] += w
+                #B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
 
                 var_idx3 = var_idx*3
                 L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += A_left
@@ -393,7 +394,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
        
         # Solve linear system
-        V_some = spsolve(L, B)
+        #V_some = spsolve(L, B)
 
         V_some3 = spsolve(L3, B3)
 
