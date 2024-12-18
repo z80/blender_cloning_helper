@@ -275,8 +275,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
     # Iteratively converge.
     for iteration in range(iterations):
         
-        alpha = float(iteration+1)/float(iterations)
-        target_positions = alpha*(fixed_positions - start_positions) + start_positions
+        #alpha = float(iteration+1)/float(iterations)
+        #target_positions = alpha*(fixed_positions - start_positions) + start_positions
 
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
@@ -312,8 +312,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
             inv_R[abs_idx] = R_new_old
 
         # Build linear system with cotangent weights
-        L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
-        B = np.zeros( (variable_verts_qty, 3) )
+        #L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
+        #B = np.zeros( (variable_verts_qty, 3) )
         
         dims3 = variable_verts_qty*3
         L3 = csr_matrix( (dims3, dims3) )
