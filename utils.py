@@ -210,7 +210,7 @@ def compute_normal_importances( V, F, fixed_vertices, max_importance, min_import
     distances = compute_geodesic_distances(V, F, fixed_vertices)
     weights = falloff_func( distances, influence_radii )
     weights = np.max( weights, axis=0 )
-    weights = 1.0 - weights
+    #weights = 1.0 - weights
 
     importances = (max_importance - min_importance) * weights + min_importance
     return importances
@@ -287,7 +287,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
     R_to_principal = get_vertex_bases(V, F )
 
     # Per-coordinate importance.
-    A_scale = np.identity( 3 )
+    A_scale_i = np.identity( 3 )
+    A_scale_j = np.identity( 3 )
 
     # Iteratively converge.
     for iteration in range(iterations):
@@ -297,9 +298,6 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
         inv_R = np.zeros( (N, 3, 3) )
 
         for abs_idx in range(N):
-            # Apply per-vertex importance.
-            A_scale[0, 0] = float( importances[abs_idx] )
-
             # All abs vert. indices this vertex is connected to.
             vert_connections = connections[abs_idx]
             connections_qty = len(vert_connections)
@@ -337,13 +335,16 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
         B3 = np.zeros( (dims3,) )
 
         for abs_idx, var_idx in variable_vertex_indices.items():
+            # Apply per-vertex importance.
+            A_scale_i[0, 0] = float( importances[abs_idx] )
+
             Pi = V[abs_idx]
             Ri = R[abs_idx]
 
             R_new_old_i = inv_R[abs_idx]
             R_old_to_principal_i = R_to_principal[abs_idx]
             A_i = np.dot( R_old_to_principal_i, R_new_old_i )
-            A_i = np.dot( A_scale, A_i )
+            A_i = np.dot( A_scale_i, A_i )
 
             #A_i = R_new_old_i
             #A_i = np.identity( 3 )
@@ -356,13 +357,16 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
             # However, vertices it is connected to can be fixed.
             vert_connections = connections[abs_idx]
             for abs_idx_other in vert_connections:
+                # Apply per-vertex importance.
+                A_scale_j[0, 0] = float( importances[abs_idx_other] )
+
                 Pj = V[abs_idx_other]
                 Rj = R[abs_idx_other]
 
                 R_new_old_j = inv_R[abs_idx_other]
                 R_old_to_principal_j = R_to_principal[abs_idx_other]
                 A_j = np.dot( R_old_to_principal_j, R_new_old_j )
-                A_j = np.dot( A_scale, A_j )
+                A_j = np.dot( A_scale_j, A_j )
                 
                 #A_j = R_new_old_j
                 #A_j = np.identity( 3 )
@@ -592,17 +596,17 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
 
 
 
-def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
+def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, iterations=3, influence_radii=None):
 
     if influence_radii is None:
-        influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 0.3 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     # Inverse distance transform is the initial approximation for the ARAP.
     V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
     
     # This ARAP is with importance falloff.
     max_importance = 10.0
-    min_importance = 0.1
+    min_importance = 1.0
     V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func=falloff_function, V_initial=V_idt)
 
     return V_arap
