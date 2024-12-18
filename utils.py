@@ -202,7 +202,20 @@ def compute_cotangent_weights(V, F):
             weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
     return weights
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=2.5):
+
+def compute_normal_importances( V, F, fixed_vertices, max_importance, min_importance, influence_radii, falloff_func ):
+    #import pdb
+    #pdb.set_trace()
+    # distances dims = fixed_qty by total_qty 
+    distances = compute_geodesic_distances(V, F, fixed_vertices)
+    weights = falloff_func( distances, influence_radii )
+    weights = np.max( weights, axis=0 )
+    importances = (max_importance - min_importance) * weights + min_importance
+    return importances
+
+
+
+def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -216,6 +229,12 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
     Returns:
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization.
     """
+    if influence_radii is None:
+        influence_radii = 5.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+
+    # Compute geodesic distances and influences for all vertices.
+    importances = compute_normal_importances( V, F, fixed_vertices, max_importance, min_importance, influence_radii, falloff_func )
+ 
     # Compute cotangent weights
     cotangent_weights = compute_cotangent_weights(V, F)
     connections, max_connections_qty = get_edge_lists(V, F)
@@ -270,19 +289,18 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
     # Per-coordinate importance.
     A_scale = np.identity( 3 )
-    A_scale[0,0] = normal_importance
 
     # Iteratively converge.
     for iteration in range(iterations):
         
-        alpha = float(iteration+1)/float(iterations)
-        target_positions = alpha*(fixed_positions - start_positions) + start_positions
-
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
         inv_R = np.zeros( (N, 3, 3) )
 
         for abs_idx in range(N):
+            # Apply per-vertex importance.
+            A_scale[0, 0] = 5.0 #float( importances[abs_idx] )
+
             # All abs vert. indices this vertex is connected to.
             vert_connections = connections[abs_idx]
             connections_qty = len(vert_connections)
@@ -312,8 +330,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
             inv_R[abs_idx] = R_new_old
 
         # Build linear system with cotangent weights
-        L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
-        B = np.zeros( (variable_verts_qty, 3) )
+        #L = csr_matrix( (variable_verts_qty, variable_verts_qty) )
+        #B = np.zeros( (variable_verts_qty, 3) )
         
         dims3 = variable_verts_qty*3
         L3 = csr_matrix( (dims3, dims3) )
@@ -366,7 +384,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
                     vert_idx = fixed_vertex_indices[abs_idx_other]
                     Pj_fixed   = fixed_positions[vert_idx]
                     #Pj_new = V_new[abs_idx_other]
-                    B[var_idx] += w*Pj_fixed
+                    #B[var_idx] += w*Pj_fixed
 
                     var_idx3 = var_idx*3
                     v = w*Pj_fixed
@@ -375,14 +393,14 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
                 else:
                     var_idx_other = variable_vertex_indices[abs_idx_other]
-                    L[var_idx, var_idx_other] += -w
+                    #L[var_idx, var_idx_other] += -w
 
                     var_idx3 = var_idx*3
                     var_idx_other3 = var_idx_other*3
                     L3[var_idx3:(var_idx3+3), var_idx_other3:(var_idx_other3+3)] -= A_left
 
-                L[var_idx, var_idx] += w
-                B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
+                #L[var_idx, var_idx] += w
+                #B[var_idx]          += 0.5*w*np.dot( (Ri + Rj), (Pi - Pj) )
 
                 var_idx3 = var_idx*3
                 L3[var_idx3:(var_idx3+3), var_idx3:(var_idx3+3)] += A_left
@@ -392,8 +410,8 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
 
        
-        # Solve linear system
-        V_some = spsolve(L, B)
+        # Solve the linear system
+        #V_some = spsolve(L, B)
 
         V_some3 = spsolve(L3, B3)
 
@@ -571,6 +589,27 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     #V_new = V_arap
     
     return V_arap
+
+
+
+def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
+
+    if influence_radii is None:
+        influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+    
+    # Inverse distance transform is the initial approximation for the ARAP.
+    V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
+    
+    # This ARAP is with importance falloff.
+    max_importance = 5.0
+    min_importance = 0.1
+    V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func=falloff_function, V_initial=V_idt)
+
+    return V_arap
+
+
+
+
 
 # Example usage
 # V = np.array([...]) # Nx3 array of vertices
