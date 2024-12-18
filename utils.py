@@ -599,7 +599,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
 def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, iterations=3, influence_radii=None):
 
     if influence_radii is None:
-        influence_radii = 0.3 * np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 0.25 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     # Inverse distance transform is the initial approximation for the ARAP.
     V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
