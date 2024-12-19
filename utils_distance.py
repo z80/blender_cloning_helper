@@ -130,7 +130,7 @@ def extract_reachable_vertices(Vs, Fs, selected_vertices, selected_positions, di
 
     # Filter Vs
     new_Vs = Vs[reachable_indices]
-    unreachable_Vs = Vs[unreachable_Vs]
+    unreachable_Vs = Vs[unreachable_indices]
 
     # Filter Fs: Keep only faces where all vertices are reachable
     new_Fs = []

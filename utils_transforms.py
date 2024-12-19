@@ -4,6 +4,9 @@ from scipy.sparse.linalg import spsolve
 from scipy.sparse.csgraph import dijkstra
 
 
+from utils_geometry import *
+
+
 def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, distances, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 

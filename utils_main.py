@@ -11,10 +11,8 @@ from utils_falloff    import *
 VERY_FAR_DISTANCE = 1.0e10
 
 def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, default_radius=1.0, max_influence=10.0, min_influence=1.0 ):
-    import pdb
-    pdb.set_trace()
 
-    qty = len( fixed_vertices )
+    qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
     fixed_vertices   = []
     distance_metrics = []
@@ -28,26 +26,27 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
 
         fixed_vertices.append( index )
         fixed_positions[idx] = pos
-        distance_metrics[idx] = metric
+        distance_metrics.append( metric )
         influence_radii[idx] = radius
 
-    pdb.set_trace()
-
     # Compute distances from anchor points to all vertices.
-    distances = compute_distances( V, F, selected_vertices, metric_types )
+    distances = compute_distances( V, F, fixed_vertices, distance_metrics )
 
     # Only pick reachable vertices.
     # They are re-packed so that transform algorithms should work as usual.
     unreachable_V, unreachable_indices, \
     reachable_V, reachable_F, reachable_distances, reachable_indices \
-                            = extract_reachable_vertices(Vs, Fs, fixed_vertices, fixed_positions, distances)
+                            = extract_reachable_vertices(V, F, fixed_vertices, fixed_positions, distances)
 
     # Modify reachable distances so that it doesn't contain negative numbers.
     negative_inds = np.where( reachable_distances < 0.0 )
     reachable_distances[negative_inds] = VERY_FAR_DISTANCE
 
+    import pdb
+    pdb.set_trace()
+
     # Apply the inverse distance transform first.
-    modified_reachable_V, R, T = inverse_distance_transform( reachable_V, reachable_F, reachable_fixed_vertices, reachable_fixed_positions, falloff_function )
+    modified_reachable_V, R, T = inverse_distance_transform( reachable_V, reachable_F, fixed_vertices, fixed_positions, reachable_distances )
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.

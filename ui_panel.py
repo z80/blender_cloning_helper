@@ -27,8 +27,10 @@ if not dir in sys.path:
     
 import install_needed_packages
 
-import utils
-import utils_working_one
+#import utils
+#import utils_working_one
+
+import utils_main
 
 
 class PanelSettings(bpy.types.PropertyGroup):
@@ -568,17 +570,18 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
 
         #import pdb
         #pdb.set_trace()
+        fixed_data = []
+        qty = target_positions.shape[0]
+        for i in range(qty):
+            ind = vert_inds[i]
+            pos = target_positions[i]
+            radius = 0.25
+            metric = "euclidean"
+            data = { "index": ind, "pos": pos, "radius": radius, "metric": metric }
+            fixed_data.append( data )
         
-        # IGL precomputation
-        #arap = igl.ARAP( Vs, Fs, 3, vert_inds )
-        # IGL solve
-        #Vs_new = arap.solve( target_positions, Vs )
-        
-        #import pdb
-        #pdb.set_trace()
-
-        #Vs_new = utils.arap_with_proportional_displacements( Vs, Fs, vert_inds, target_positions, iterations=1, influence_radii=None)
-        Vs_new = utils.arap_with_varible_normal_importance(Vs, Fs, vert_inds, target_positions )
+        #Vs_new = utils.arap_with_varible_normal_importance(Vs, Fs, vert_inds, target_positions )
+        Vs_new = utils_main.smooth_transform( Vs, Fs, fixed_data, apply_elastic=False )
         
         # Apply modified vertex coordinates to meshes.
         apply_to_mesh( mesh, Vs_new )
