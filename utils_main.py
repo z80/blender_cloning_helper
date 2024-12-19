@@ -11,6 +11,9 @@ from utils_falloff    import *
 VERY_FAR_DISTANCE = 1.0e10
 
 def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, default_radius=1.0, max_influence=10.0, min_influence=1.0 ):
+    import pdb
+    pdb.set_trace()
+
     qty = len( fixed_vertices )
     fixed_positions  = np.zeros( (qty, 3) )
     fixed_vertices   = []
@@ -27,6 +30,8 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
         fixed_positions[idx] = pos
         distance_metrics[idx] = metric
         influence_radii[idx] = radius
+
+    pdb.set_trace()
 
     # Compute distances from anchor points to all vertices.
     distances = compute_distances( V, F, selected_vertices, metric_types )
