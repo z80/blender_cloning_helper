@@ -38,7 +38,13 @@ def compute_euclidean_distances( V, fixed_vertices ):
     """
     The same thig but computing euclidean distances.
     """
-    distances = np.linalg.norm(V[:, np.newaxis] - V[np.newaxis, :], axis=-1)
+    qty_fixed = len(fixed_vertices)
+    qty_total = V.shape[0]
+    distances = np.zeros( (qty_fixed, qty_total) )
+    for idx, abs_idx in enumerate(fixed_vertices):
+        V_fixed = V[abs_idx]
+        dists = np.linalg.norm(V.T - V_fixed[:, None], axis=0)
+        distances[idx] = dists
     return distances
 
 
