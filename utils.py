@@ -438,6 +438,12 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_
 
     return V_new
 
+
+
+
+
+
+
 def compute_geodesic_distances(V, F, fixed_vertices):
     """
     Computes geodesic distances from each vertex to the fixed vertices.
