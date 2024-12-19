@@ -466,6 +466,139 @@ def compute_geodesic_distances(V, F, fixed_vertices):
     
     return distances
 
+
+
+def compute_euclidean_distances( V, fixed_vertices ):
+    """
+    The same thig but computing euclidean distances.
+    """
+    distances = np.linalg.norm(V[:, np.newaxis] - V[np.newaxis, :], axis=-1)
+    return distances
+
+
+
+
+
+def compute_distances(Vs, Fs, selected_vertices, metric_types):
+    """
+    Computes distances from selected vertices to all other vertices using specified metrics.
+
+    Parameters:
+        Vs (ndarray): N x 3 array of vertex positions.
+        Fs (ndarray): M x 3 array of face indices.
+        selected_vertices (list): List of selected vertex indices.
+        metric_types (list): List of strings "geodesic" or "euclidean" corresponding to selected_vertices.
+
+    Returns:
+        ndarray: Distances for all selected vertices, in the same order as selected_vertices.
+    """
+    # Validate input
+    if len(selected_vertices) != len(metric_types):
+        raise ValueError("Length of selected_vertices must match length of metric_types.")
+    
+    # Separate selected vertices by metric type
+    geodesic_indices = [i for i, m in enumerate(metric_types) if m == "geodesic"]
+    euclidean_indices = [i for i, m in enumerate(metric_types) if m == "euclidean"]
+    
+    geodesic_vertices = [selected_vertices[i] for i in geodesic_indices]
+    euclidean_vertices = [selected_vertices[i] for i in euclidean_indices]
+    
+    # Compute distances for each type
+    geodesic_distances = (
+        compute_geodesic_distances(Vs, Fs, geodesic_vertices)
+        if geodesic_vertices else np.empty((0, Vs.shape[0]))
+    )
+    euclidean_distances = (
+        compute_euclidean_distances(Vs, euclidean_vertices)
+        if euclidean_vertices else np.empty((0, Vs.shape[0]))
+    )
+    
+    # Combine results in the original order
+    all_distances = []
+    geo_idx, eu_idx = 0, 0
+    for metric in metric_types:
+        if metric == "geodesic":
+            all_distances.append(geodesic_distances[geo_idx])
+            geo_idx += 1
+        elif metric == "euclidean":
+            all_distances.append(euclidean_distances[eu_idx])
+            eu_idx += 1
+    
+    return np.array(all_distances)
+
+
+
+
+
+def extract_reachable_vertices(Vs, Fs, selected_vertices, distances):
+    """
+    Re-pack Vs, Fs, selected_vertices, and distances to only include reachable vertices.
+
+    Parameters:
+        Vs (ndarray): N x 3 array of vertex positions.
+        Fs (ndarray): M x 3 array of face indices.
+        selected_vertices (list): List of selected vertex indices.
+        distances (ndarray): Array of distances from the compute_distances() function.
+
+    Returns:
+        tuple: (new_Vs, new_Fs, new_selected_vertices, new_distances, reachable_indices)
+            - new_Vs: Filtered vertex positions.
+            - new_Fs: Filtered face indices.
+            - new_selected_vertices: Filtered selected vertices.
+            - new_distances: Filtered distances.
+            - reachable_indices: Indices of reachable vertices in the original Vs array.
+    """
+    # Determine reachable vertices (non-negative distances for at least one selected vertex)
+    reachable_mask = np.any(distances >= 0, axis=0)
+    reachable_indices = np.where(reachable_mask)[0]
+
+    # Map old indices to new indices
+    index_map = {old_idx: new_idx for new_idx, old_idx in enumerate(reachable_indices)}
+
+    # Filter Vs
+    new_Vs = Vs[reachable_indices]
+
+    # Filter Fs: Keep only faces where all vertices are reachable
+    new_Fs = []
+    for face in Fs:
+        if all(vertex in reachable_indices for vertex in face):
+            new_Fs.append([index_map[v] for v in face])
+    new_Fs = np.array(new_Fs)
+
+    # Filter selected_vertices: Keep only those that are reachable
+    new_selected_vertices = [index_map[v] for v in selected_vertices if v in reachable_indices]
+
+    # Filter distances
+    new_distances = distances[:, reachable_indices]
+
+    return new_Vs, new_Fs, new_selected_vertices, new_distances, reachable_indices
+
+
+
+
+def update_original_vertices( original_Vs, modified_reachable_Vs, reachable_indices ):
+    """
+    Updates the original vertex array with the modified reachable vertices.
+
+    Parameters:
+        original_Vs (ndarray): N x 3 array of the original vertex positions.
+        modified_reachable_Vs (ndarray): K x 3 array of modified reachable vertex positions.
+        reachable_indices (ndarray): Indices of the reachable vertices in the original array.
+
+    Returns:
+        ndarray: Updated vertex positions for the original array.
+    """
+    # Create a copy of the original vertices to avoid modifying in place
+    updated_Vs = original_Vs.copy()
+    
+    # Update the reachable vertices in the original array
+    updated_Vs[reachable_indices] = modified_reachable_Vs
+    
+    return updated_Vs
+
+
+
+
 def falloff_function(distances, influence_radii):
     """
     Computes the falloff weights based on distances and influence radii.
