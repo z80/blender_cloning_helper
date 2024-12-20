@@ -9,7 +9,7 @@ from utils_geometry import *
 
 
 
-def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radii):
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radius, normalized=True):
     """
     Apply rigid body transformation and interpolate displacements using Gaussian Process.
 
@@ -34,12 +34,17 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
 
     # Step 7: Interpolate displacements using Gaussian Process
     # Use the RBF kernel (Squared Exponential)
-    def rbf_kernel(distances, length_scales):
-        return np.exp( -(distances / length_scales[:, None])**2 )
+    def rbf_kernel(distances, length_scale):
+        return np.exp( -(distances / length_scale)**2 )
 
     # Compute kernel matrices
-    K = rbf_kernel(distances[:, fixed_vertices], influence_radii)  # Kernel for fixed points
-    K_star = rbf_kernel(distances, influence_radii)                # Kernel between all points and fixed points
+    # K has to be symmetric. Otherwise there is no exact match in the points where the function is defined.
+    K = rbf_kernel(distances[:, fixed_vertices], influence_radius)  # Kernel for fixed points
+    K_star = rbf_kernel(distances, influence_radius)                # Kernel between all points and fixed points
+
+    if normalized:
+        K_star_lengths = np.linalg.norm(K_star, axis=0)
+        K_star = K_star / K_star_lengths[None, :]
 
     # Solve for weights (zero-noise GP assumes K is invertible)
     weights = np.linalg.solve(K, modified_displacements)

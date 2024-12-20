@@ -10,7 +10,7 @@ from utils_falloff    import *
 
 VERY_FAR_DISTANCE = 1.0e10
 
-def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, iterations=3, default_radius=1.0, max_influence=10.0, min_influence=1.0 ):
+def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, iterations=3, default_radius=1.0, max_influence=10.0, min_influence=1.0, normalized_gp=False ):
 
     qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
@@ -46,7 +46,8 @@ def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, iter
     if (not apply_gp) or apply_elastic:
         modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances )
     else:
-        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, influence_radii )
+        mean_radius = np.mean( influence_radii )
+        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.
