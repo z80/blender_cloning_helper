@@ -581,7 +581,7 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
             fixed_data.append( data )
         
         #Vs_new = utils.arap_with_varible_normal_importance(Vs, Fs, vert_inds, target_positions )
-        Vs_new = utils_main.smooth_transform( Vs, Fs, fixed_data, apply_elastic=False )
+        Vs_new = utils_main.smooth_transform( Vs, Fs, fixed_data, apply_elastic=True )
         
         # Apply modified vertex coordinates to meshes.
         apply_to_mesh( mesh, Vs_new )

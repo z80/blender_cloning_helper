@@ -42,9 +42,6 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
     negative_inds = np.where( reachable_distances < 0.0 )
     reachable_distances[negative_inds] = VERY_FAR_DISTANCE
 
-    import pdb
-    pdb.set_trace()
-
     # Apply the inverse distance transform first.
     modified_reachable_V, R, T = inverse_distance_transform( reachable_V, reachable_F, fixed_vertices, fixed_positions, reachable_distances )
 
@@ -55,7 +52,11 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
     
     # If we should run the elastic transform, do that.
     if apply_elastic:
-        V_arap = arap( reachable_V, reachable_F, reachable_distances, reachable_fixed_vertices, reachable_fixed_positions, influence_radii, max_influence_min_influence, modified_reachable_V, falloff_function )
+        import pdb
+        pdb.set_trace()
+
+        # V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None
+        V_arap = arap( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, iterations, max_influence, min_influence, influence_radii, falloff_function, modified_reachable_V )
         modified_reachable_V = V_arap
 
     # Recombine transforms back together.
