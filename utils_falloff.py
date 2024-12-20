@@ -19,10 +19,10 @@ def falloff_function(distances, influence_radii):
         ret = np.zeros_like( distances )
 
     elif type(influence_radii) == float:
-        ret = np.exp( -0.25*(distances/influence_radii)**2 )
+        ret = np.exp( -(distances/influence_radii)**2 )
 
     else:
-        ret = np.exp( -0.25*(distances / influence_radii[:, None])**2 )
+        ret = np.exp( -(distances / influence_radii[:, None])**2 )
 
     return ret
 
