@@ -4,136 +4,59 @@ from scipy.sparse.linalg import spsolve
 from scipy.sparse.csgraph import dijkstra
 
 
-def get_edge_lists( V, F ):
+from utils_geometry import *
+
+
+
+
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radii):
     """
-    For each vertex it produces the list of all other vertices 
-    it is connected with an edge.
+    Apply rigid body transformation and interpolate displacements using Gaussian Process.
+
+    Parameters:
+    V (numpy.ndarray): Nx3 array of 3D points.
+    fixed_vertices (numpy.ndarray): Indices of fixed vertices (K,).
+    fixed_positions (numpy.ndarray): Target positions of the fixed vertices (Kx3).
+    distances (numpy.ndarray): Precomputed distances between fixed points and all points (KxN).
 
     Returns:
-    - connections, max_connections: An array of arrays of vertex indices.
+    numpy.ndarray: Updated points after applying the rigid body transform and interpolated displacements.
     """
-    verts = {}
-    for face in F:
-        for i in range(3):
-            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
-            vert = verts.get( i0, set() )
-            vert.add( i1 )
-            vert.add( i2 )
-            verts[i0] = vert
 
-    # Now convert it to the array.
-    connections = []
-    qty = V.shape[0]
-    max_connections = 0
-    for i in range(qty):
-        vert = verts.get( i, set() )
-        # Convertes a set ot a sorted list.
-        vert = sorted( vert )
-        connections.append( vert )
+    #Calculate rigid transform first.
+    R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
 
-        connections_qty = len(vert)
-        if connections_qty > max_connections:
-            max_connections = connections_qty
+    # Step 5: Apply the rigid body transform to all points
+    V_transformed = np.dot(R, V.T).T + T
 
+    # Step 6: Compute the displacements of modified points after rigid body transform
+    modified_displacements = fixed_positions - V_transformed[fixed_vertices]
 
-    return connections, connections_qty
+    # Step 7: Interpolate displacements using Gaussian Process
+    # Use the RBF kernel (Squared Exponential)
+    def rbf_kernel(distances, length_scales):
+        return np.exp( -0.25*(distances / length_scales[:, None])**2 )
 
+    # Compute kernel matrices
+    K = rbf_kernel(distances[:, fixed_vertices], influence_radii)  # Kernel for fixed points
+    K_star = rbf_kernel(distances, influence_radii)                # Kernel between all points and fixed points
 
-def get_rigid_transform( V, fixed_vertices, fixed_positions ):
-    """
-    Returns rotation and translation of the best rigid transform.
-    """
-    start_positions = V[fixed_vertices]
-    start_origin    = np.mean( start_positions, axis=0 )
-    target_origin   = np.mean( fixed_positions, axis=0 )
+    # Solve for weights (zero-noise GP assumes K is invertible)
+    weights = np.linalg.solve(K, modified_displacements)
 
-    start_deltas    = start_positions - start_origin
-    target_deltas   = fixed_positions - target_origin
+    # Interpolate displacements
+    interpolated_displacements = np.dot(K_star.T, weights)
 
-    S = np.dot( start_deltas.T, target_deltas )
-    U, _, VT = np.linalg.svd( S )
-    inv_R = np.dot(U, VT)
-    R = inv_R.T
+    # Step 8: Update all points with interpolated displacements
+    V_updated = V_transformed + interpolated_displacements
 
-    T = target_origin - start_origin
-
-    return (R, T)
-
-
-
-
-def get_vertex_bases( V, F ):
-    """
-    It first computes average normals for each vertex.
-    Then, it compites a basis converting from the world ref. frame to a 
-    vertex ref. frame where the normal is the first basis vector.
-    """
-    faces_qty = F.shape[0]
-    face_normals = np.zeros( (faces_qty, 3) )
-    for face_idx, face in enumerate(F):
-        for i in range(3):
-            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
-            v0, v1, v2 = V[i0], V[i1], V[i2]
-
-            edge1 = v1 - v0
-            edge2 = v2 - v0
-            normal = np.cross(edge1, edge2)
-
-            face_normals[face_idx] = normal
-
-    verts_qty = V.shape[0]
-    vert_normals = np.zeros( (verts_qty, 3) )
-
-    for face_idx, face in enumerate(F):
-        i0, i1, i2 = int(face[0]), int(face[1]), int(face[2])
-        face_normal = face_normals[face_idx]
-        vert_normals[i0] += face_normal
-        vert_normals[i1] += face_normal
-        vert_normals[i2] += face_normal
-
-    bases = np.zeros( (verts_qty, 3, 3) )
-
-    for vert_idx in range(verts_qty):
-        norm = vert_normals[vert_idx]
-        abs_norm = np.linalg.norm( norm )
-        if abs_norm > 1.0e-6:
-            norm = norm / abs_norm
-        else:
-            norm = np.array( [1.0, 0.0, 0.0] )
-
-        b = _basis_from_normal( norm )
-        bases[vert_idx] = b.T
-
-    return bases
-
-
-
-
-def _basis_from_normal( n ):
-    abs_n = np.abs( n )
-    sorted_indices = np.argsort(-abs_n)  # Sort in descending order
-    a, b, c = n[sorted_indices[0]], n[sorted_indices[1]], n[sorted_indices[2]]
-    swapped = np.zeros( (3,) )
-    swapped[sorted_indices[0]] = -b
-    swapped[sorted_indices[1]] = a
-    swapped[sorted_indices[2]] = c
-
-    # Gram-Schmidt orthogonalization
-    tangent1 = swapped - np.dot(swapped, n) * n  # Remove component along avg_normal
-    tangent1 /= np.linalg.norm(tangent1)  # Normalize
-    
-    # Compute the third basis vector
-    tangent2 = np.cross(n, tangent1)
-    tangent2 /= np.linalg.norm(tangent2)  # Normalize
-
-    basis = np.stack( [n, tangent1, tangent2], axis=0 )
-    return basis
+    return V_updated, R, T
 
 
 
 
 
-def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, epsilon=1.0e-3 ):
+def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
     best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
@@ -143,8 +66,6 @@ def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, 
     #pdb.set_trace()
 
     R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
-    # distances dims = fixed_qty by total_qty 
-    distances = compute_geodesic_distances(V, F, fixed_vertices)
     # Indices where the distance is very small.
     below_threshold_indices = np.where(distances < epsilon)
     # Create a mask for all points
@@ -175,34 +96,18 @@ def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, power=2, 
 
         new_positions[vert_idx] += displacement
 
-    return new_positions, distances
+    return new_positions, R, T
 
 
 
-def compute_cotangent_weights(V, F):
-    """
-    Computes cotangent weights for each edge in the mesh.
-    
-    Parameters:
-    - V: np.array of shape (N, 3) containing the vertices of the mesh.
-    - F: np.array of shape (M, 3) containing the faces of the mesh.
-    
-    Returns:
-    - weights: A dictionary where keys are edges (i, j) and values are the computed cotangent weights.
-    """
-    weights = {}
-    for face in F:
-        for i in range(3):
-            i0, i1, i2 = int(face[i]), int(face[(i + 1) % 3]), int(face[(i + 2) % 3])
-            v0, v1, v2 = V[i0], V[i1], V[i2]
-            edge1, edge2 = v1 - v0, v2 - v0
-            angle = np.arccos(np.clip(np.dot(edge1, edge2) / (np.linalg.norm(edge1) * np.linalg.norm(edge2)), -1.0, 1.0))
-            cot_angle_2 = float(0.5 / np.tan(angle))
-            weights[(i1, i2)] = weights.get( (i1, i2), 0) + cot_angle_2
-            weights[(i2, i1)] = weights.get( (i2, i1), 0) + cot_angle_2
-    return weights
+def rigid_transform( V, R, T ):
+    new_positions = np.dot( R, V.T ).T + T
+    return new_positions
 
-def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, normal_importance=2.5):
+
+
+
+def arap(V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     
@@ -216,6 +121,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
     Returns:
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization.
     """
+    # Compute geodesic distances and influences for all vertices.
+    importances = compute_normal_importances( V, F, distances, fixed_vertices, max_importance, min_importance, influence_radii, falloff_func )
+ 
     # Compute cotangent weights
     cotangent_weights = compute_cotangent_weights(V, F)
     connections, max_connections_qty = get_edge_lists(V, F)
@@ -269,15 +177,12 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
     R_to_principal = get_vertex_bases(V, F )
 
     # Per-coordinate importance.
-    A_scale = np.identity( 3 )
-    A_scale[0,0] = normal_importance
+    A_scale_i = np.identity( 3 )
+    A_scale_j = np.identity( 3 )
 
     # Iteratively converge.
     for iteration in range(iterations):
         
-        #alpha = float(iteration+1)/float(iterations)
-        #target_positions = alpha*(fixed_positions - start_positions) + start_positions
-
         # Compute rotations
         R = np.zeros( (N, 3, 3) )
         inv_R = np.zeros( (N, 3, 3) )
@@ -320,13 +225,16 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
         B3 = np.zeros( (dims3,) )
 
         for abs_idx, var_idx in variable_vertex_indices.items():
+            # Apply per-vertex importance.
+            A_scale_i[0, 0] = float( importances[abs_idx] )
+
             Pi = V[abs_idx]
             Ri = R[abs_idx]
 
             R_new_old_i = inv_R[abs_idx]
             R_old_to_principal_i = R_to_principal[abs_idx]
             A_i = np.dot( R_old_to_principal_i, R_new_old_i )
-            A_i = np.dot( A_scale, A_i )
+            A_i = np.dot( A_scale_i, A_i )
 
             #A_i = R_new_old_i
             #A_i = np.identity( 3 )
@@ -339,13 +247,16 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
             # However, vertices it is connected to can be fixed.
             vert_connections = connections[abs_idx]
             for abs_idx_other in vert_connections:
+                # Apply per-vertex importance.
+                A_scale_j[0, 0] = float( importances[abs_idx_other] )
+
                 Pj = V[abs_idx_other]
                 Rj = R[abs_idx_other]
 
                 R_new_old_j = inv_R[abs_idx_other]
                 R_old_to_principal_j = R_to_principal[abs_idx_other]
                 A_j = np.dot( R_old_to_principal_j, R_new_old_j )
-                A_j = np.dot( A_scale, A_j )
+                A_j = np.dot( A_scale_j, A_j )
                 
                 #A_j = R_new_old_j
                 #A_j = np.identity( 3 )
@@ -393,7 +304,7 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
 
        
-        # Solve linear system
+        # Solve the linear system
         #V_some = spsolve(L, B)
 
         V_some3 = spsolve(L3, B3)
@@ -417,55 +328,9 @@ def arap(V, F, fixed_vertices, fixed_positions, iterations=2, V_initial=None, no
 
     return V_new
 
-def compute_geodesic_distances(V, F, fixed_vertices):
-    """
-    Computes geodesic distances from each vertex to the fixed vertices.
-    
-    Parameters:
-    - V: np.array of shape (N, 3) containing the vertices of the mesh.
-    - F: np.array of shape (M, 3) containing the faces of the mesh.
-    - fixed_vertices: np.array of indices of fixed vertices.
-    
-    Returns:
-    - distances: np.array of shape (num_fixed, N) containing the geodesic distances from each vertex to the fixed vertices.
-    """
-    N = V.shape[0]
-    distances = np.full((len(fixed_vertices), N), np.inf)
-    
-    graph = csr_matrix((N, N))
-    for face in F:
-        for i in range(3):
-            i0, i1 = face[i], face[(i + 1) % 3]
-            dist = np.linalg.norm(V[i0] - V[i1])
-            graph[i0, i1] = dist
-            graph[i1, i0] = dist
-    
-    for idx, fv in enumerate(fixed_vertices):
-        distances[idx], _ = dijkstra(graph, indices=fv, return_predecessors=True)
-    
-    return distances
 
-def falloff_function(distances, influence_radii):
-    """
-    Computes the falloff weights based on distances and influence radii.
-    
-    Parameters:
-    - distances: np.array of shape (num_fixed, N) containing the geodesic distances.
-    - influence_radii: np.array of shape (num_fixed,) containing the influence radii for each fixed vertex.
-    
-    Returns:
-    - falloff_weights: np.array of shape (num_fixed, N) containing the falloff weights.
-    """
-    if influence_radii is None:
-        ret = np.zeros_like( distances )
 
-    elif type(influence_radii) == float:
-        ret = np.exp( -(distances/influence_radii)**2 )
 
-    else:
-        ret = np.exp( -(distances / influence_radii[:, None])**2 )
-
-    return ret
 
 
 
@@ -544,7 +409,7 @@ def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii )
 
     return V_new
 
-def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=10, influence_radii=None):
+def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, iterations=2, influence_radii=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization with proportional displacements.
     
@@ -560,7 +425,7 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     - V_new: np.array of shape (N, 3) containing the new vertex positions after ARAP optimization with proportional displacements.
     """
     if influence_radii is None:
-        influence_radii = 1.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
+        influence_radii = 2.0 * np.ones(len(fixed_vertices))  # Default radius if none provided
     
     V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
     V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, V_initial=V_idt)
@@ -573,6 +438,9 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
     
     return V_arap
 
+
+
+
 # Example usage
 # V = np.array([...]) # Nx3 array of vertices
 # F = np.array([...]) # Mx3 array of faces
@@ -580,4 +448,22 @@ def arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, 
 # fixed_positions = np.array([...]) # Corresponding positions for fixed vertices
 # influence_radii = np.array([...]) # Influence radii for each fixed vertex
 # V_new = arap_with_proportional_displacements(V, F, fixed_vertices, fixed_positions, influence_radii=influence_radii)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
