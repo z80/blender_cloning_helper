@@ -575,13 +575,13 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
         for i in range(qty):
             ind = vert_inds[i]
             pos = target_positions[i]
-            radius = 0.5
-            metric = "geodesic"
+            radius = 0.2
+            metric = "euclidean"
             data = { "index": ind, "pos": pos, "radius": radius, "metric": metric }
             fixed_data.append( data )
         
         #Vs_new = utils.arap_with_varible_normal_importance(Vs, Fs, vert_inds, target_positions )
-        Vs_new = utils_main.smooth_transform( Vs, Fs, fixed_data, apply_elastic=False )
+        Vs_new = utils_main.smooth_transform( Vs, Fs, fixed_data, apply_gp=True, apply_elastic=True )
         
         # Apply modified vertex coordinates to meshes.
         apply_to_mesh( mesh, Vs_new )

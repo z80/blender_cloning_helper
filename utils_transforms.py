@@ -35,7 +35,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
     # Step 7: Interpolate displacements using Gaussian Process
     # Use the RBF kernel (Squared Exponential)
     def rbf_kernel(distances, length_scales):
-        return np.exp( -0.25*(distances / length_scales[:, None])**2 )
+        return np.exp( -(distances / length_scales[:, None])**2 )
 
     # Compute kernel matrices
     K = rbf_kernel(distances[:, fixed_vertices], influence_radii)  # Kernel for fixed points
