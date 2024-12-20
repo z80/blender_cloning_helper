@@ -43,7 +43,8 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
     reachable_distances[negative_inds] = VERY_FAR_DISTANCE
 
     # Apply the inverse distance transform first.
-    modified_reachable_V, R, T = inverse_distance_transform( reachable_V, reachable_F, fixed_vertices, fixed_positions, reachable_distances )
+    #modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances )
+    modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, influence_radii )
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.
@@ -52,8 +53,8 @@ def smooth_transform( V, F, fixed_data, apply_elastic=True, iterations=3, defaul
     
     # If we should run the elastic transform, do that.
     if apply_elastic:
-        import pdb
-        pdb.set_trace()
+        #import pdb
+        #pdb.set_trace()
 
         # V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None
         V_arap = arap( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, iterations, max_influence, min_influence, influence_radii, falloff_function, modified_reachable_V )

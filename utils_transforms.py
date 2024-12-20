@@ -7,7 +7,56 @@ from scipy.sparse.csgraph import dijkstra
 from utils_geometry import *
 
 
-def inverse_distance_transform( V, F, fixed_vertices, fixed_positions, distances, power=2, epsilon=1.0e-3 ):
+
+
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radii):
+    """
+    Apply rigid body transformation and interpolate displacements using Gaussian Process.
+
+    Parameters:
+    V (numpy.ndarray): Nx3 array of 3D points.
+    fixed_vertices (numpy.ndarray): Indices of fixed vertices (K,).
+    fixed_positions (numpy.ndarray): Target positions of the fixed vertices (Kx3).
+    distances (numpy.ndarray): Precomputed distances between fixed points and all points (KxN).
+
+    Returns:
+    numpy.ndarray: Updated points after applying the rigid body transform and interpolated displacements.
+    """
+
+    #Calculate rigid transform first.
+    R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
+
+    # Step 5: Apply the rigid body transform to all points
+    V_transformed = np.dot(R, V.T).T + T
+
+    # Step 6: Compute the displacements of modified points after rigid body transform
+    modified_displacements = fixed_positions - V_transformed[fixed_vertices]
+
+    # Step 7: Interpolate displacements using Gaussian Process
+    # Use the RBF kernel (Squared Exponential)
+    def rbf_kernel(distances, length_scales):
+        return np.exp( -0.25*(distances / length_scales[:, None])**2 )
+
+    # Compute kernel matrices
+    K = rbf_kernel(distances[:, fixed_vertices], influence_radii)  # Kernel for fixed points
+    K_star = rbf_kernel(distances, influence_radii)                # Kernel between all points and fixed points
+
+    # Solve for weights (zero-noise GP assumes K is invertible)
+    weights = np.linalg.solve(K, modified_displacements)
+
+    # Interpolate displacements
+    interpolated_displacements = np.dot(K_star.T, weights)
+
+    # Step 8: Update all points with interpolated displacements
+    V_updated = V_transformed + interpolated_displacements
+
+    return V_updated, R, T
+
+
+
+
+
+def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
     best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
