@@ -16,23 +16,54 @@ if not dir in sys.path:
 from panel_properties import *
 from panel_utils      import *
 
-# Operator to add and populate the collection
-class SetMeshEditableOperator(bpy.types.Operator):
-    bl_idname = "object.set_mesh_editable"
-    bl_label = "Make mesh editable"
-    bl_description = "Add and populate a vertex collection with mesh vertex coordinates"
 
-
+class MESH_OT_set_mesh_editable( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.set_mesh_editable"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
     @classmethod
-    def poll(cls, context):
-        obj = context.object
-        ret = (obj is not None) and (obj.type == 'MESH') and ( not hasattr(obj, "mesh_prop") )
-        return ret
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        set_mesh_editable( mesh, True )
+        return {"FINISHED"}
 
 
-    def execute(self, context):
-        obj = context.object
-        set_mesh_editable( True )
+class MESH_OT_clear_mesh_editable( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.clear_mesh_editable"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        set_mesh_editable( mesh, False )
+        return {"FINISHED"}
+
 
 
 
@@ -46,16 +77,26 @@ def depsgraph_update_handler(scene):
     if mesh is None:
         return
 
-    editable = get_mesh_editable()
-    if not editable:
+    # Check if a transform operator is running
+    wm = bpy.context.window_manager
+    active_operator = wm.operators[-1].bl_idname if wm.operators else None
+
+    # Only process after transform operations (translate, rotate, scale)
+    if active_operator not in {
+        "TRANSFORM_OT_translate",
+        "TRANSFORM_OT_rotate",
+        "TRANSFORM_OT_resize",  # Resize = Scale
+    }:
         return
+
+    # Log or process vertices only at the end of the operation
+    print(f"End of operation: {active_operator}")
+
+
 
     # Access the bmesh for the edit mesh
     bm = bmesh.from_edit_mesh(mesh.data)
     bm.verts.ensure_lookup_table()
-
-    # Clear the collection to avoid duplicate entries
-    obj.displaced_vertices_collection.displaced_vertices.clear()
 
     # Check for enabled symmetries.
     axes = []
@@ -67,6 +108,7 @@ def depsgraph_update_handler(scene):
         axes.append(2)
 
     # Record selected vertices
+    inds = []
     for vert in bm.verts:
         if vert.select:  # Check if the vertex is selected
             verts = find_symmetric_vertices( bm, vert, axes )
@@ -75,9 +117,10 @@ def depsgraph_update_handler(scene):
                 pos   = vert_i.co[:]
                 # This one either updates the existing one or adds a new one.
                 add_mesh_anchor( mesh, index, pos )
+                inds.append(index)
 
     # Debug: Print the number of displaced vertices
-    print(f"Displaced vertices recorded")
+    print(f"Displaced vertices recorded {inds}")
 
 
 
@@ -91,14 +134,16 @@ def depsgraph_update_handler(scene):
 
 
 def register_operators():
-    bpy.utils.register_class(SetMeshEditableOperator)
+    bpy.utils.register_class(MESH_OT_set_mesh_editable)
+    bpy.utils.register_class(MESH_OT_clear_mesh_editable)
     # Register the depsgraph update handler
     bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
 
 
 
 def unregister_operators():
+    bpy.utils.unregister_class(MESH_OT_set_mesh_editable)
+    bpy.utils.unregister_class(MESH_OT_clear_mesh_editable)
     bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
-    bpy.utils.unregister_class(SetMeshEditableOperator)
 
 

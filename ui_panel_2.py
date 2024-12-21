@@ -43,13 +43,16 @@ class MESH_PT_VertexCollectionPanel(bpy.types.Panel):
         if mesh is None:
             layout.label( text="Select a mesh" )
             return
-        
         editable = get_mesh_editable( mesh )
         if editable:
             layout.label( text="Drag vertices around in edit mode." )
+            layout.label( text="Or make it not editable" )
+            layout.operator("mesh.clear_mesh_editable", text="Make not editable")
+
         else:
-            layout.operator("object.set_mesh_editable", text="Make editable")
-            layout.label(text="Vertex collection exists.")
+            layout.operator("mesh.set_mesh_editable", text="Make editable")
+
+
 
 
 

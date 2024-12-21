@@ -44,16 +44,18 @@ class AnchorPointProp(bpy.types.PropertyGroup):
         min=0
     )
 
-    pos: bpy.props.PointerProperty(
+    pos: bpy.props.FloatVectorProperty(
         name="Position",
-        description="Anchor point position",
-        type=MeshVertexProp
+        description="3D vector",
+        size=3,  # 3 components for XYZ
+        default=(0.0, 0.0, 0.0),
+        subtype='XYZ'  # Display as a 3D vector
     )
 
 
 
 
-class MeshProp(bpy.types.CollectionProperty):
+class MeshProp(bpy.types.PropertyGroup):
     original_shape: bpy.props.CollectionProperty(type=MeshVertexProp)
     
     anchors: bpy.props.CollectionProperty(type=AnchorPointProp)
@@ -85,10 +87,14 @@ def register_properties():
     bpy.utils.register_class(MeshVertexProp)
     bpy.utils.register_class(AnchorPointProp)
     bpy.utils.register_class(MeshProp)
-
+    
+    bpy.types.Mesh.mesh_prop = bpy.props.PointerProperty(type=MeshProp)
 
 
 def unregister_properties():
+    # Remove the PointerProperty from the Mesh type
+    del bpy.types.Mesh.mesh_prop
+
     bpy.utils.unregister_class(MeshProp)
     bpy.utils.unregister_class(AnchorPointProp)
     bpy.utils.unregister_class(MeshVertexProp)

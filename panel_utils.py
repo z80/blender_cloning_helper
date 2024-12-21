@@ -9,6 +9,8 @@ from bpy_extras.view3d_utils import region_2d_to_vector_3d
 import sys
 import os
 
+import numpy as np
+
 dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append( dir )
@@ -28,31 +30,38 @@ def get_selected_mesh():
     return None
 
 
+
 def get_mesh_editable( mesh ):
-    ret = hasattr( mesh, 'mesh_prop' )
+    mesh_prop = mesh.data.mesh_prop
+    original_shape = mesh_prop.original_shape
+    stored_qty = len(original_shape)
+
+    verts_qty = len(mesh.data.vertices)
+
+    ret = (stored_qty == verts_qty)
+
     return ret
 
 
-def set_mesh_editable( mesh, en ):
-    editable = get_mesh_editable( mesh )
 
+
+def set_mesh_editable( mesh, en ):
     if en:
-        if not editable:
-            mesh.mesh_prop = bpy.props.PointerProperty(type=MeshProp)
-            # Store vertices automatically.
-            store_mesh_vertices( mesh )
+        store_mesh_vertices( mesh )
 
     else:
-        if editable:
-            del mesh.mesh_prop
+        mesh_prop = mesh.data.mesh_prop
+        original_shape = mesh_prop.original_shape
+
+        original_shape.clear()
 
 
 def mesh_to_2d_arrays( mesh ):
-    vertices = np.array([v.co for v in mesh.vertices])
+    vertices = np.array([v.co for v in mesh.data.vertices])
 
     # Extract and virtually triangulate faces
     virtual_faces = []
-    for poly in mesh.polygons:
+    for poly in mesh.data.polygons:
         verts = poly.vertices[:]
         if len(verts) == 3:
             # If the polygon is already a triangle, use it as-is
@@ -69,9 +78,7 @@ def mesh_to_2d_arrays( mesh ):
 
 
 def store_mesh_vertices( mesh ):
-    set_mesh_editable( mesh )
-
-    mesh_prop = mesh.mesh_prop
+    mesh_prop = mesh.data.mesh_prop
     original_shape = mesh_prop.original_shape
 
     original_shape.clear()
@@ -84,18 +91,18 @@ def store_mesh_vertices( mesh ):
 
 
 def add_mesh_anchor( mesh, index, pos ):
-    mesh_prop = mesh.mesh_prop
+    mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
 
     for anchor in anchors:
         existing_index = anchor.index
         if index == existing_index:
-            anchor.pos = pos
+            anchor.pos = pos[:]
             return
 
     anchor = anchors.add()
     anchor.index = index
-    anchor.pos   = pos
+    anchor.pos   = pos[:]
 
 
 
@@ -113,6 +120,8 @@ def find_symmetric_vertices(bm, vert, axes):
             for other_vert in bm.verts:
                 if (not other_vert.select) and (other_vert.co == mirrored_pos) and (not other_vert in mirrored_verts):
                     mirrored_verts.append( other_vert )
+
+    return mirrored_verts
     
 
 
