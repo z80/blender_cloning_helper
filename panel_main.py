@@ -27,6 +27,7 @@ import install_needed_packages_2
 import utils_main
 from panel_properties import *
 from panel_operators  import *
+from panel_draw       import *
 
 
 class MESH_PT_VertexCollectionPanel(bpy.types.Panel):
@@ -61,8 +62,12 @@ def register():
     register_operators()
     bpy.utils.register_class(MESH_PT_VertexCollectionPanel)
 
+    register_draw()
+
 
 def unregister():
+    unregister_draw()
+
     bpy.utils.unregister_class(MESH_PT_VertexCollectionPanel)
     unregister_operators()
     unregister_properties()
