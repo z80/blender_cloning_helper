@@ -67,7 +67,7 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
 
             layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
-            layout.operator( "mesh.add_anchors",      text="Add anchors" )
+            layout.operator( "mesh.add_anchors",      text="Make selected anchors" )
             layout.operator( "mesh.remove_anchors",   text="Remove anchors" )
 
         else:
