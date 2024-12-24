@@ -15,6 +15,7 @@ if not dir in sys.path:
 
 from panel_properties import *
 from panel_utils      import *
+from panel_async      import *
 
 
 class MESH_OT_set_mesh_editable( bpy.types.Operator ):
@@ -63,6 +64,82 @@ class MESH_OT_clear_mesh_editable( bpy.types.Operator ):
         mesh = get_selected_mesh()
         set_mesh_editable( mesh, False )
         return {"FINISHED"}
+
+
+
+class MESH_OT_apply_transform( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.apply_transform"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        initiate_async_update( mesh )
+        return {"FINISHED"}
+
+
+class MESH_OT_revert_transform( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.revert_transform"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        show_original_mesh( mesh )
+        return {"FINISHED"}
+
+
+
+class MESH_OT_remove_anchors( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.remove_anchors"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        remove_selected_anchors( mesh )
+        return {"FINISHED"}
+
+
 
 
 
@@ -136,14 +213,21 @@ def depsgraph_update_handler(scene):
 def register_operators():
     bpy.utils.register_class(MESH_OT_set_mesh_editable)
     bpy.utils.register_class(MESH_OT_clear_mesh_editable)
+    bpy.utils.register_class(MESH_OT_apply_transform)
+    bpy.utils.register_class(MESH_OT_revert_transform)
+    bpy.utils.register_class(MESH_OT_remove_anchors)
+
     # Register the depsgraph update handler
     bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
 
 
 
 def unregister_operators():
+    bpy.utils.unregister_class(MESH_OT_remove_anchors)
+    bpy.utils.unregister_class(MESH_OT_apply_transform)
     bpy.utils.unregister_class(MESH_OT_set_mesh_editable)
     bpy.utils.unregister_class(MESH_OT_clear_mesh_editable)
+    bpy.utils.unregister_class(MESH_OT_revert_transform)
     bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
 
 

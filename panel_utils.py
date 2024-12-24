@@ -92,6 +92,7 @@ def set_mesh_editable( mesh, en ):
         original_shape.clear()
 
 
+
 def mesh_to_2d_arrays( mesh ):
     vertices = np.array([v.co for v in mesh.data.vertices])
 
@@ -142,6 +143,88 @@ def add_mesh_anchor( mesh, index, pos ):
 
 
 
+def remove_mesh_anchor( mesh, index ):
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+
+    for idx, anchor in enumerate(anchors):
+        existing_index = anchor.index
+        if index == existing_index:
+            anchor.pos = pos[:]
+            anchors.remove(idx)
+            return
+
+
+
+
+def remove_selected_anchors( mesh ):
+    """
+    Removes selected vertices from the list of anchors.
+    """
+    # Check if the active object is a mesh in EDIT mode
+    if bpy.context.mode != 'EDIT_MESH':
+        return
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return
+
+    is_editable = get_mesh_editable( mesh )
+    if not is_editable:
+        return
+
+    # Access the bmesh for the edit mesh
+    bm = bmesh.from_edit_mesh(mesh.data)
+    bm.verts.ensure_lookup_table()
+
+    # Record selected vertices
+    inds = []
+    for vert in bm.verts:
+        if vert.select:  # Check if the vertex is selected
+            index = vert.index
+            remove_mesh_anchor( mesh, index )
+
+
+
+def get_selected_anchor( mesh ):
+    # Check if the active object is a mesh in EDIT mode
+    if bpy.context.mode != 'EDIT_MESH':
+        return -1
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return -1
+
+    is_editable = get_mesh_editable( mesh )
+    if not is_editable:
+        return -1
+
+    # Access the bmesh for the edit mesh
+    bm = bmesh.from_edit_mesh(mesh.data)
+    bm.verts.ensure_lookup_table()
+
+    # Record selected vertices
+    index = -1
+    for vert in bm.verts:
+        if vert.select:  # Check if the vertex is selected
+            index = vert.index
+            break
+
+    # Check if such anchor exists
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+    for idx, anchor in enumerate(anchors):
+        anchor_index = anchor.index
+        if index == anchor_index:
+            return idx
+
+    return -1
+
+
+
+
+
+
 
 # Function to find symmetric counterpart
 def find_symmetric_vertices(bm, vert, axes):
@@ -177,12 +260,12 @@ def get_mesh_update_data( mesh ):
         data = { 'index': index, 'pos': pos, 'metric': metric, 'radius': radius }
 
     use_gp      = (mesh_prop.step_1 == 'gaussian_proc')
-    use_elastic = (mesh.prop.step_2 == 'elastic')
+    use_elastic = (mesh_prop.step_2 == 'elastic')
 
     iterations     = 3
     default_radius = 1.0
-    max_influence = 10.0
-    min_influence = 1.0
+    max_influence  = 10.0
+    min_influence  = 1.0
 
     return V, F, update_data, use_gp, use_elastic, iterations, default_radius, max_influence, min_influence
 
@@ -205,5 +288,21 @@ def apply_to_mesh( mesh, V_new ):
         co.x, co.y, co.z = target_at[0], target_at[1], target_at[2]
         co = inv_mat @ co
         vert.co = co
- 
+
+
+
+def show_original_mesh( mesh ):
+    verts = mesh.data.vertices
+    verts_qty = len(verts)
+
+    mesh_prop = mesh.data.mesh_prop
+    original_shape = mesh_prop.original_shape
+    
+    for vert_ind in range(verts_qty):
+        target  = original_shape[vert_ind].pos
+        vert    = verts[vert_ind]
+        vert.co = target
+
+
+
 

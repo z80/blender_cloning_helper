@@ -30,9 +30,9 @@ from panel_operators  import *
 from panel_draw       import *
 
 
-class MESH_PT_VertexCollectionPanel(bpy.types.Panel):
-    bl_label = "Mesh Vertex Collection"
-    bl_idname = "VIEW3D_PT_mesh_vertex_collection"
+class MESH_PT_MeshEditPanel(bpy.types.Panel):
+    bl_label = "Mesh Edit panel"
+    bl_idname = "VIEW3D_PT_mesh_edit_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     bl_category = "Mesh Tools"
@@ -50,6 +50,25 @@ class MESH_PT_VertexCollectionPanel(bpy.types.Panel):
             layout.label( text="Or make it not editable" )
             layout.operator("mesh.clear_mesh_editable", text="Make not editable")
 
+            layout.label( text="Step 1" )
+            mesh_prop = mesh.data.mesh_prop
+            layout.prop(mesh_prop, 'step_1', expand=True)
+
+            layout.label( text="Step 2" )
+            mesh_prop = mesh.data.mesh_prop
+            layout.prop(mesh_prop, 'step_2', expand=True)
+
+            index = get_selected_anchor( mesh )
+            if index >= 0:
+                anchor = mesh.data.mesh_prop.anchors[index]
+                layout.label( text=f"Vertex #{index}" )
+                layout.prop( anchor, 'metric', expand=True )
+                layout.prop( anchor, 'radius', expand=True )
+
+            layout.operator( "mesh.apply_transform",  text="Apply transform" )
+            layout.operator( "mesh.revert_transform", text="Show original shape" )
+            layout.operator( "mesh.remove_anchors",   text="Remove anchors" )
+
         else:
             layout.operator("mesh.set_mesh_editable", text="Make editable")
 
@@ -60,7 +79,7 @@ class MESH_PT_VertexCollectionPanel(bpy.types.Panel):
 def register():
     register_properties()
     register_operators()
-    bpy.utils.register_class(MESH_PT_VertexCollectionPanel)
+    bpy.utils.register_class(MESH_PT_MeshEditPanel)
 
     register_draw()
 
@@ -68,7 +87,7 @@ def register():
 def unregister():
     unregister_draw()
 
-    bpy.utils.unregister_class(MESH_PT_VertexCollectionPanel)
+    bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
     unregister_operators()
     unregister_properties()
     
