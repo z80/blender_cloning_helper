@@ -143,6 +143,32 @@ class MESH_OT_remove_anchors( bpy.types.Operator ):
 
 
 
+class MESH_OT_add_anchors( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.add_anchors"
+    bl_label  = "Pick all selected meshes and put them into the state."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        mesh = get_selected_mesh()
+        add_selected_anchors( mesh )
+        return {"FINISHED"}
+
+
+
+
 
 # Handler function to track changes
 def depsgraph_update_handler(scene):
@@ -215,19 +241,21 @@ def register_operators():
     bpy.utils.register_class(MESH_OT_clear_mesh_editable)
     bpy.utils.register_class(MESH_OT_apply_transform)
     bpy.utils.register_class(MESH_OT_revert_transform)
+    bpy.utils.register_class(MESH_OT_add_anchors)
     bpy.utils.register_class(MESH_OT_remove_anchors)
 
     # Register the depsgraph update handler
-    bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
+    #bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
 
 
 
 def unregister_operators():
     bpy.utils.unregister_class(MESH_OT_remove_anchors)
+    bpy.utils.unregister_class(MESH_OT_add_anchors)
     bpy.utils.unregister_class(MESH_OT_apply_transform)
     bpy.utils.unregister_class(MESH_OT_set_mesh_editable)
     bpy.utils.unregister_class(MESH_OT_clear_mesh_editable)
     bpy.utils.unregister_class(MESH_OT_revert_transform)
-    bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
+    #bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
 
 

@@ -61,12 +61,13 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             index = get_selected_anchor( mesh )
             if index >= 0:
                 anchor = mesh.data.mesh_prop.anchors[index]
-                layout.label( text=f"Vertex #{index}" )
+                layout.label( text=f"Anchor #{index}" )
                 layout.prop( anchor, 'metric', expand=True )
                 layout.prop( anchor, 'radius', expand=True )
 
             layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
+            layout.operator( "mesh.add_anchors",      text="Add anchors" )
             layout.operator( "mesh.remove_anchors",   text="Remove anchors" )
 
         else:

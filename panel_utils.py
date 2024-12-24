@@ -127,6 +127,25 @@ def store_mesh_vertices( mesh ):
 
 
 
+def get_mesh_original_data( mesh ):
+    mesh_prop = mesh.data.mesh_prop
+    original_shape = mesh_prop.original_shape
+
+    verts = []
+    Vs, Fs = mesh_to_2d_arrays( mesh )
+
+    for index, vertex in enumerate(original_shape):
+        pos = vertex.pos
+        Vs[index,0] = pos[0]
+        Vs[index,1] = pos[1]
+        Vs[index,2] = pos[2]
+
+    return Vs, Fs
+
+
+
+
+
 def add_mesh_anchor( mesh, index, pos ):
     mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
@@ -143,6 +162,53 @@ def add_mesh_anchor( mesh, index, pos ):
 
 
 
+def get_anchor_indices( mesh ):
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+    
+    indices = set()
+    for anchor in anchors:
+        index = anchor.index
+        indices.add( index )
+
+    return indices
+
+
+
+def add_selected_anchors( mesh ):
+    """
+    Add selected vertices to the list of anchors.
+    """
+    # Check if the active object is a mesh in EDIT mode
+    if bpy.context.mode != 'EDIT_MESH':
+        return
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return
+
+    is_editable = get_mesh_editable( mesh )
+    if not is_editable:
+        return
+
+    anchor_indices = get_anchor_indices( mesh )
+
+    # Access the bmesh for the edit mesh
+    bm = bmesh.from_edit_mesh(mesh.data)
+    bm.verts.ensure_lookup_table()
+
+    # Record selected vertices
+    inds = []
+    for vert in bm.verts:
+        if vert.select:  # Check if the vertex is selected
+            index = vert.index
+            if index not in anchor_indices:
+                pos = vert.co
+                add_mesh_anchor( mesh, index, pos )
+
+
+
+
 def remove_mesh_anchor( mesh, index ):
     mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
@@ -150,7 +216,6 @@ def remove_mesh_anchor( mesh, index ):
     for idx, anchor in enumerate(anchors):
         existing_index = anchor.index
         if index == existing_index:
-            anchor.pos = pos[:]
             anchors.remove(idx)
             return
 
@@ -244,7 +309,7 @@ def find_symmetric_vertices(bm, vert, axes):
 
 
 def get_mesh_update_data( mesh ):
-    V, F = mesh_to_2d_arrays( mesh )
+    V, F = get_mesh_original_data( mesh )
 
     mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
@@ -258,6 +323,7 @@ def get_mesh_update_data( mesh ):
         metric = anchor.metric
         radius = anchor.radius
         data = { 'index': index, 'pos': pos, 'metric': metric, 'radius': radius }
+        update_data.append( data )
 
     use_gp      = (mesh_prop.step_1 == 'gaussian_proc')
     use_elastic = (mesh_prop.step_2 == 'elastic')
@@ -277,6 +343,12 @@ def apply_to_mesh( mesh, V_new ):
     
     #import pdb
     #pdb.set_trace()
+
+    # Store the current mode.
+    mode_save = bpy.context.object.mode
+    # Switch to object mode.
+    bpy.ops.object.mode_set(mode='OBJECT')
+
     
     mat   = mesh.matrix_world
     inv_mat = mat.inverted()
@@ -284,10 +356,10 @@ def apply_to_mesh( mesh, V_new ):
     for vert_ind in range(verts_qty):
         target_at = V_new[vert_ind]
         vert = verts[vert_ind]
-        co = vert.co
-        co.x, co.y, co.z = target_at[0], target_at[1], target_at[2]
-        co = inv_mat @ co
-        vert.co = co
+        vert.co = (target_at[0], target_at[1], target_at[2])
+
+    # Restore the saved mode.
+    bpy.ops.object.mode_set(mode=mode_save)
 
 
 
@@ -298,10 +370,19 @@ def show_original_mesh( mesh ):
     mesh_prop = mesh.data.mesh_prop
     original_shape = mesh_prop.original_shape
     
+    # Store the current mode.
+    mode_save = bpy.context.object.mode
+    print( "Saved mode: ", mode_save )
+    # Switch to object mode.
+    bpy.ops.object.mode_set(mode='OBJECT')
+
     for vert_ind in range(verts_qty):
         target  = original_shape[vert_ind].pos
         vert    = verts[vert_ind]
         vert.co = target
+
+    # Restore the saved mode.
+    bpy.ops.object.mode_set(mode=mode_save)
 
 
 
