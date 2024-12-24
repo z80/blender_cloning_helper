@@ -174,6 +174,17 @@ def get_anchor_indices( mesh ):
     return indices
 
 
+def update_mesh_anchor( mesh, index, pos ):
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+
+    for anchor in anchors:
+        existing_index = anchor.index
+        if index == existing_index:
+            anchor.pos = pos[:]
+
+
+
 
 def add_selected_anchors( mesh ):
     """
@@ -206,6 +217,11 @@ def add_selected_anchors( mesh ):
                 pos = vert.co
                 add_mesh_anchor( mesh, index, pos )
 
+    # Update the scene and force redraw
+    bpy.context.view_layer.update()  # Update the view layer
+    for area in bpy.context.screen.areas:
+        if area.type == 'VIEW_3D':
+            area.tag_redraw()
 
 
 
@@ -248,6 +264,14 @@ def remove_selected_anchors( mesh ):
         if vert.select:  # Check if the vertex is selected
             index = vert.index
             remove_mesh_anchor( mesh, index )
+
+    # Update the scene and force redraw
+    bpy.context.view_layer.update()  # Update the view layer
+    for area in bpy.context.screen.areas:
+        if area.type == 'VIEW_3D':
+            area.tag_redraw()
+
+
 
 
 
@@ -338,6 +362,8 @@ def get_mesh_update_data( mesh ):
 
 
 def apply_to_mesh( mesh, V_new ):
+    unselect_all_vertices( mesh )
+
     verts = mesh.data.vertices
     verts_qty = V_new.shape[0]
     
@@ -364,6 +390,8 @@ def apply_to_mesh( mesh, V_new ):
 
 
 def show_original_mesh( mesh ):
+    unselect_all_vertices( mesh )
+
     verts = mesh.data.vertices
     verts_qty = len(verts)
 
@@ -385,5 +413,22 @@ def show_original_mesh( mesh ):
     bpy.ops.object.mode_set(mode=mode_save)
 
 
-
+def unselect_all_vertices(obj):
+    """
+    Unselect all vertices of the mesh in Edit Mode.
+    
+    :param obj: The mesh object (must be in Edit Mode).
+    """
+    if bpy.context.mode != 'EDIT_MESH':
+        raise RuntimeError("The object must be in Edit Mode to unselect vertices.")
+    
+    # Access the BMesh of the object
+    bm = bmesh.from_edit_mesh(obj.data)
+    
+    # Deselect all vertices
+    for vert in bm.verts:
+        vert.select = False
+    
+    # Update the mesh in the viewport
+    bmesh.update_edit_mesh(obj.data, loop_triangles=False)
 

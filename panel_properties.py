@@ -67,7 +67,7 @@ class MeshProp(bpy.types.PropertyGroup):
             ('inverse_dist',  'Inverse distance', 'Inverse Distance'), 
             ('gaussian_proc', 'Gaussian process',  'Gaussian Process')
         ], 
-        default='inverse_dist'
+        default='gaussian_proc'
     )
 
     step_2: bpy.props.EnumProperty(

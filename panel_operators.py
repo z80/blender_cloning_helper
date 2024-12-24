@@ -210,17 +210,29 @@ def depsgraph_update_handler(scene):
     if mesh.use_mesh_mirror_z:
         axes.append(2)
 
+    anchor_indices = get_anchor_indices( mesh )
+
     # Record selected vertices
     inds = []
+    did_update = False
     for vert in bm.verts:
         if vert.select:  # Check if the vertex is selected
             verts = find_symmetric_vertices( bm, vert, axes )
             for vert_i in verts:
                 index = vert_i.index
-                pos   = vert_i.co[:]
-                # This one either updates the existing one or adds a new one.
-                add_mesh_anchor( mesh, index, pos )
-                inds.append(index)
+                if index in anchor_indices:
+                    pos   = vert_i.co[:]
+                    # This one either updates the existing one or adds a new one.
+                    update_mesh_anchor( mesh, index, pos )
+                    inds.append(index)
+                    did_update = True
+
+    if did_update:
+        # Update the scene and force redraw
+        bpy.context.view_layer.update()  # Update the view layer
+        for area in bpy.context.screen.areas:
+            if area.type == 'VIEW_3D':
+                area.tag_redraw()
 
     # Debug: Print the number of displaced vertices
     print(f"Displaced vertices recorded {inds}")
@@ -245,7 +257,7 @@ def register_operators():
     bpy.utils.register_class(MESH_OT_remove_anchors)
 
     # Register the depsgraph update handler
-    #bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
+    bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
 
 
 
@@ -256,6 +268,6 @@ def unregister_operators():
     bpy.utils.unregister_class(MESH_OT_set_mesh_editable)
     bpy.utils.unregister_class(MESH_OT_clear_mesh_editable)
     bpy.utils.unregister_class(MESH_OT_revert_transform)
-    #bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
+    bpy.app.handlers.depsgraph_update_post.remove(depsgraph_update_handler)
 
 
