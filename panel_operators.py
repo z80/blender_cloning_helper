@@ -87,7 +87,7 @@ class MESH_OT_apply_transform( bpy.types.Operator ):
     
     def execute( self, context ):
         mesh = get_selected_mesh()
-        initiate_async_update( mesh )
+        recalculate_mesh_shape( mesh )
         return {"FINISHED"}
 
 

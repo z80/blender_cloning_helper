@@ -6,19 +6,15 @@ from utils_main import *
 from panel_utils import *
 
 
-async def _calculate_update( mesh, V, F, fixed_data, apply_gp, apply_elastic, iterations, default_radius, max_influence, min_influence ):
-    V_new = smooth_transform( V, F, fixed_data, apply_gp, apply_elastic, iterations, default_radius, max_influence, min_influence )
-    return mesh, V_new
 
-
-def initiate_async_update( mesh ):
+def recalculate_mesh_shape( mesh ):
     #import pdb
     #pdb.set_trace()
 
     # The data needed for the update
-    V, F, fixed_data, apply_gp, apply_elastic, iterations, default_radius, max_influence, min_influence = get_mesh_update_data( mesh )
+    V, F, fixed_data, apply_gp, apply_elastic, apply_proportional_falloff, iterations, default_radius, max_influence, min_influence = get_mesh_update_data( mesh )
     
-    V_new = smooth_transform( V, F, fixed_data, apply_gp, apply_elastic, iterations, default_radius, max_influence, min_influence )
+    V_new = smooth_transform( V, F, fixed_data, apply_gp, apply_elastic, apply_proportional_falloff, iterations, default_radius, max_influence, min_influence )
 
     apply_to_mesh( mesh, V_new )
 

@@ -80,6 +80,16 @@ class MeshProp(bpy.types.PropertyGroup):
         default='none'
     )
 
+    step_3: bpy.props.EnumProperty(
+        name="Third step", 
+        description="Third processing step", 
+        items=[
+            ('none',    'None',                'No 3-d step'), 
+            ('proportional_falloff', 'Proportional Falloff', 'Proportional Falloff between Gaussian Process and Elastic Defirmation.')
+        ], 
+        default='none'
+    )
+
     update_queue: deque = deque()
     is_updating: bpy.props.BoolProperty(default=False)
 

@@ -50,13 +50,18 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             layout.label( text="Or make it not editable" )
             layout.operator("mesh.clear_mesh_editable", text="Make not editable")
 
-            layout.label( text="Step 1" )
             mesh_prop = mesh.data.mesh_prop
+
+            layout.label( text="Step 1" )
             layout.prop(mesh_prop, 'step_1', expand=True)
 
             layout.label( text="Step 2" )
-            mesh_prop = mesh.data.mesh_prop
             layout.prop(mesh_prop, 'step_2', expand=True)
+
+            if mesh_prop.step_2 != 'none':
+                layout.label( text="Step 3" )
+                layout.prop(mesh_prop, 'step_3', expand=True)
+                
 
             index = get_selected_anchor( mesh )
             if index >= 0:

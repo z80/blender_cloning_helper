@@ -351,6 +351,7 @@ def get_mesh_update_data( mesh ):
 
     use_gp      = (mesh_prop.step_1 == 'gaussian_proc')
     use_elastic = (mesh_prop.step_2 == 'elastic')
+    use_proportional_falloff = (mesh_prop.step_3 == 'proportional_falloff')
 
     iterations     = 3
     default_radius = 1.0
