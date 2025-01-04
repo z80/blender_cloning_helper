@@ -82,7 +82,7 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
 
 # Panel for setting paths
 class MESH_PT_ToolPathsPanel(bpy.types.Panel):
-    bl_label = "Tool Settings"
+    bl_label = "Photogrammetry"
     bl_idname = "MESH_PT_tool_paths"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
