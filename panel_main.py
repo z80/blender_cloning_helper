@@ -66,17 +66,42 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             index = get_selected_anchor( mesh )
             if index >= 0:
                 anchor = mesh.data.mesh_prop.anchors[index]
-                layout.label( text=f"Anchor #{index}" )
+                layout.label( text=f"Pin #{index}" )
                 layout.prop( anchor, 'metric', expand=True )
                 layout.prop( anchor, 'radius', expand=True )
 
             layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
-            layout.operator( "mesh.add_anchors",      text="Make selected anchors" )
-            layout.operator( "mesh.remove_anchors",   text="Clear selected anchors" )
+            layout.operator( "mesh.add_anchors",      text="Make selected pins" )
+            layout.operator( "mesh.remove_anchors",   text="Clear selected pins" )
 
         else:
             layout.operator("mesh.set_mesh_editable", text="Make editable")
+
+
+
+# Panel for setting paths
+class MESH_PT_ToolPathsPanel(bpy.types.Panel):
+    bl_label = "Tool Settings"
+    bl_idname = "MESH_PT_tool_paths"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    #bl_context = 'scene'
+    bl_category = 'Mesh Tools'
+    
+    def draw(self, context):
+        layout = self.layout
+        tool_paths = context.scene.tool_paths
+
+        layout.label(text="FFMPEG path")
+        layout.prop(tool_paths, "ffmpeg_path")
+        layout.label(text="Frames")
+        layout.prop(tool_paths, "ffmpeg_frames")
+        layout.label(text="Seconds")
+        layout.prop(tool_paths, "ffmpeg_seconds")
+
+        layout.prop(tool_paths, "colmap_path")
+
 
 
 
@@ -86,6 +111,7 @@ def register():
     register_properties()
     register_operators()
     bpy.utils.register_class(MESH_PT_MeshEditPanel)
+    bpy.utils.register_class(MESH_PT_ToolPathsPanel)
 
     register_draw()
 
@@ -94,6 +120,7 @@ def unregister():
     unregister_draw()
 
     bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
+    bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
     unregister_operators()
     unregister_properties()
     

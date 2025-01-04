@@ -69,8 +69,9 @@ def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, appl
 
         if apply_proportional_falloff:
             if V_gp is None:
+                mean_radius = np.mean( influence_radii )
                 V_gp, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
-                modified_reachable_V = apply_proportional_displacements( V_gp, V_arap, reachable_distances, influence_radii )
+                modified_reachable_V = apply_proportional_displacements( V_gp, V_arap, reachable_distances, influence_radii, falloff_function )
 
     # Recombine transforms back together.
     V_new = V.copy()

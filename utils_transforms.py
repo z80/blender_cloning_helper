@@ -340,10 +340,10 @@ def arap(V, F, distances, fixed_vertices, fixed_positions, iterations, max_impor
 
 
 
-def inverse_distance_weighting_multiple( falloff_func, distances, power=2, epsilon=1e-3):
+def inverse_distance_weighting_multiple( falloff_func, distances, influence_radii, power=2, epsilon=1e-3):
     num_anchors         = distances.shape[0]
     num_points          = distances.shape[1]
-    values              = falloff_func( distances )
+    values              = falloff_func( distances, influence_radii )
     interpolated_values = np.zeros_like( distances )
 
 
@@ -373,7 +373,7 @@ def inverse_distance_weighting_multiple( falloff_func, distances, power=2, epsil
 
 
 
-def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii ):
+def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii, falloff_func ):
     """
     Applies proportional displacements to the mesh vertices based on geodesic distances and influence radii.
     
@@ -387,15 +387,10 @@ def apply_proportional_displacements(V_idt, V_arap, distances, influence_radii )
     Returns:
     - V_new: np.array of shape (N, 3) containing the new vertex positions after applying proportional displacements.
     """
-    def falloff_func( distances ):
-        scaled_distances = distances / influence_radii[:, None]
-        ret = falloff_function( distances, influence_radii )
-        return ret
-
     #import pdb
     #pdb.set_trace()
     
-    falloff_weights = inverse_distance_weighting_multiple( falloff_func, distances )
+    falloff_weights = inverse_distance_weighting_multiple( falloff_func, distances, influence_radii )
     falloff_weights_2 = falloff_weights * falloff_weights
     combined_falloff_weights = falloff_weights.sum(axis=0)
 

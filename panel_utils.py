@@ -358,7 +358,7 @@ def get_mesh_update_data( mesh ):
     max_influence  = 10.0
     min_influence  = 1.0
 
-    return V, F, update_data, use_gp, use_elastic, iterations, default_radius, max_influence, min_influence
+    return V, F, update_data, use_gp, use_elastic, use_proportional_falloff, iterations, default_radius, max_influence, min_influence
 
 
 
@@ -420,16 +420,17 @@ def unselect_all_vertices(obj):
     
     :param obj: The mesh object (must be in Edit Mode).
     """
-    if bpy.context.mode != 'EDIT_MESH':
-        raise RuntimeError("The object must be in Edit Mode to unselect vertices.")
+    #if bpy.context.mode != 'EDIT_MESH':
+    #    raise RuntimeError("The object must be in Edit Mode to unselect vertices.")
     
-    # Access the BMesh of the object
-    bm = bmesh.from_edit_mesh(obj.data)
+    if bpy.context.mode == 'EDIT_MESH':
+        # Access the BMesh of the object
+        bm = bmesh.from_edit_mesh(obj.data)
     
-    # Deselect all vertices
-    for vert in bm.verts:
-        vert.select = False
+        # Deselect all vertices
+        for vert in bm.verts:
+            vert.select = False
     
-    # Update the mesh in the viewport
-    bmesh.update_edit_mesh(obj.data, loop_triangles=False)
+        # Update the mesh in the viewport
+        bmesh.update_edit_mesh(obj.data, loop_triangles=False)
 

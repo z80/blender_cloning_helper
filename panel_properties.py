@@ -125,7 +125,46 @@ class MeshProp(bpy.types.PropertyGroup):
 
 
 
+# Define a property group to store paths
+class ToolProperties(bpy.types.PropertyGroup):
+    colmap_path: bpy.props.StringProperty(
+        name="COLMAP Path",
+        description="Path to the COLMAP executable",
+        default=""
+    )
+    ffmpeg_path: bpy.props.StringProperty(
+        name="FFmpeg Path",
+        description="Path to the FFmpeg executable",
+        default=""
+    )
+
+    ffmpeg_frames: bpy.props.FloatProperty( 
+        name='Frames', 
+        description='Number of frames', 
+        default=1.0, 
+        min=0.0001
+    )
+
+    ffmpeg_seconds: bpy.props.FloatProperty( 
+        name='Per Seconds', 
+        description='Number of seconds', 
+        default=1.0, 
+        min=0.0001
+    )
+
+
+
+
+
+
+
+
+
 def register_properties():
+    # Register the property group
+    bpy.utils.register_class(ToolProperties)
+    bpy.types.Scene.tool_paths = bpy.props.PointerProperty(type=ToolProperties)
+
     bpy.utils.register_class(MeshVertexProp)
     bpy.utils.register_class(AnchorPointProp)
     bpy.utils.register_class(MeshProp)
@@ -141,6 +180,8 @@ def unregister_properties():
     bpy.utils.unregister_class(AnchorPointProp)
     bpy.utils.unregister_class(MeshVertexProp)
 
+    bpy.utils.unregister_class(MyProperties)
+    del bpy.types.Scene.tool_paths
 
 
 
