@@ -29,6 +29,8 @@ from panel_properties import *
 from panel_operators  import *
 from panel_draw       import *
 
+from panel_operators_photogrammetry import *
+
 
 class MESH_PT_MeshEditPanel(bpy.types.Panel):
     bl_label = "Mesh Edit panel"
@@ -95,12 +97,18 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 
         layout.label(text="FFMPEG path")
         layout.prop(tool_paths, "ffmpeg_path")
-        layout.label(text="Frames")
+
         layout.prop(tool_paths, "ffmpeg_frames")
-        layout.label(text="Seconds")
         layout.prop(tool_paths, "ffmpeg_seconds")
+        layout.prop(tool_paths, "ffmpeg_start_time", text="Start time")
+        layout.prop(tool_paths, "ffmpeg_end_time", text="End time")
+
+        layout.operator( "wm.call_ffmpeg", text="Extract frames" )
+
 
         layout.prop(tool_paths, "colmap_path")
+
+        layout.operator( "wm.call_ffmpeg", text="Extract camera poses" )
 
 
 
@@ -110,6 +118,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 def register():
     register_properties()
     register_operators()
+    register_photogrammetry()
     bpy.utils.register_class(MESH_PT_MeshEditPanel)
     bpy.utils.register_class(MESH_PT_ToolPathsPanel)
 
@@ -123,6 +132,7 @@ def unregister():
     bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
     unregister_operators()
     unregister_properties()
+    unregister_photogrammetry()
     
     
 

@@ -130,12 +130,14 @@ class ToolProperties(bpy.types.PropertyGroup):
     colmap_path: bpy.props.StringProperty(
         name="COLMAP Path",
         description="Path to the COLMAP executable",
-        default=""
+        default="", 
+        subtype="FILE_PATH"
     )
     ffmpeg_path: bpy.props.StringProperty(
         name="FFmpeg Path",
         description="Path to the FFmpeg executable",
-        default=""
+        default="", 
+        subtype="FILE_PATH"
     )
 
     ffmpeg_frames: bpy.props.FloatProperty( 
@@ -150,6 +152,20 @@ class ToolProperties(bpy.types.PropertyGroup):
         description='Number of seconds', 
         default=1.0, 
         min=0.0001
+    )
+
+    ffmpeg_start_time: bpy.props.FloatProperty( 
+        name='Start time in seconds', 
+        description='Where in the video start extracting frames, <=0 for the beginning of the video', 
+        default=-1.0, 
+        min=-1.0
+    )
+
+    ffmpeg_end_time: bpy.props.FloatProperty( 
+        name='End time in seconds', 
+        description='Where in the video stop extracting frames, -1 for the end of the video', 
+        default=-1.0, 
+        min=-1.0
     )
 
 
