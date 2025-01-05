@@ -108,7 +108,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 
         layout.prop(tool_paths, "colmap_path")
 
-        layout.operator( "wm.call_ffmpeg", text="Extract camera poses" )
+        layout.operator( "wm.call_colmap", text="Extract camera poses" )
 
 
 
