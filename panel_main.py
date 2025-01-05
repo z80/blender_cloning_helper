@@ -33,11 +33,11 @@ from panel_operators_photogrammetry import *
 
 
 class MESH_PT_MeshEditPanel(bpy.types.Panel):
-    bl_label = "Mesh Edit panel"
+    bl_label = "Elastic mesh"
     bl_idname = "VIEW3D_PT_mesh_edit_panel"
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
-    bl_category = "Mesh Tools"
+    bl_category = "Elastic mesh"
 
     def draw(self, context):
         layout = self.layout
@@ -89,7 +89,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
     bl_space_type = 'VIEW_3D'
     bl_region_type = 'UI'
     #bl_context = 'scene'
-    bl_category = 'Mesh Tools'
+    bl_category = 'Photogrammetry'
     
     def draw(self, context):
         layout = self.layout
