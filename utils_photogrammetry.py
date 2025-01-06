@@ -132,6 +132,19 @@ class ImagePoseProperties(bpy.types.PropertyGroup):
     cy: bpy.props.FloatProperty(name="cy")
 
 
+class PhotogrammetryProperties(bpy.types.PropertyGroup):
+    index: bpy.props.IntProperty( 
+        name='index', 
+        description='Vertex index of the anchor point', 
+        default=0, 
+        min=0
+    )
+
+    image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
+
+
+
+
 
 def convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
     # COLMAP to Blender translation
@@ -220,9 +233,9 @@ def populate_camera_poses():
     camera_intrinsics = _read_cameras_file(cameras_file_path)
 
     # Create property groups
-    bpy.context.scene.image_pose_properties.clear()
+    bpy.context.scene.photogrammetry_properties.image_pose_properties.clear()
     for image_name, pose in image_poses.items():
-        item = bpy.context.scene.image_pose_properties.add()
+        item = bpy.context.scene.photogrammetry_properties.image_pose_properties.add()
         item.image_path = os.path.join(blender_file_dir, 'images', image_name)
         item.transform = [elem for row in pose['transform'] for elem in row]
         
@@ -306,5 +319,35 @@ def create_ref_images( offset_distance=1.0 ):
     props = bpy.context.scene.image_pose_properties
     for prop in props:
         _create_image_object( prop, offset_distance )
+
+
+
+
+def setup_stencil_painting( camera_props )
+    # Load the image
+    image_path = camera_props.image_path
+    image = bpy.data.images.load(image_path)
+
+    # Set the active object
+    obj = bpy.context.active_object
+
+    # Switch to texture paint mode
+    bpy.ops.object.mode_set(mode='TEXTURE_PAINT')
+
+    # Get the active brush
+    brush = bpy.data.brushes["TexDraw"]
+
+    # Set the image as the stencil texture
+    tex = bpy.data.textures.new(name="StencilTexture", type='IMAGE')
+    tex.image = image
+
+    # Assign the texture to the brush's mask
+    brush.mask_texture = tex
+
+    # Adjust stencil properties
+    brush.texture_slot.mask_mapping = 'STENCIL'
+    brush.texture_slot.mask_angle = 0.0  # Angle in radians
+    brush.texture_slot.mask_location = (0.5, 0.5)  # Position in UV space (X, Y)
+    brush.texture_slot.mask_scale = (1.0, 1.0)  # Scale in UV space (X, Y)
 
 

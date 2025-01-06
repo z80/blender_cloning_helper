@@ -136,7 +136,7 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_CallFfmpeg)
     bpy.utils.register_class(WM_OT_FileSelector)
     bpy.utils.register_class(ImagePoseProperties)
-    bpy.types.Scene.image_pose_properties = bpy.props.CollectionProperty(type=ImagePoseProperties)
+    bpy.types.Scene.photogrammetry_properties = bpy.props.PointerProperty(type=PhotogrammetryProperties)
 
 def unregister_photogrammetry():
     bpy.utils.unregister_class(WM_OT_CreateRefImages)
