@@ -117,6 +117,8 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         layout.prop( props, 'show_point_cloud', expand=True )
         layout.prop( props, 'index', expand=True )
         layout.operator( "wm.place_camera", text="Place camera" )
+        layout.prop( props, 'stencil_scale_adj', expand=True )
+        layout.operator( "wm.align_stencil", text="Align stencil" )
 
 
 

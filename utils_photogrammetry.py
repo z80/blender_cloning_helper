@@ -165,10 +165,18 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
     )
 
     show_point_cloud: bpy.props.BoolProperty( 
-        name='show_point_cloud', 
+        name='Show point cloud', 
         description='Whether the point cloud should be visualized or not', 
         default=False
     )
+
+    stencil_scale_adj: bpy.props.FloatProperty( 
+        name='Stencil scale adjustment %', 
+        description='Percentage of stencil scale adjustment', 
+        default=4.0 
+    )
+
+
 
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
