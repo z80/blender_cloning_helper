@@ -171,6 +171,12 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
 
 
 def _convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
+    t0 = Matrix( ( (1,  0, 0, 0), 
+                   (0,  0, 1, 0), 
+                   (0, -1, 0, 0), 
+                   (0,  0, 0, 1)) )
+    inv_t0 = t0.inverted()
+
     # COLMAP to Blender translation
     location = Vector((rx, ry, rz))
 
@@ -179,8 +185,8 @@ def _convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
     t = Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
     t.translation = location #* 5
     # Swap axes for Blender
-    t0 = Quaternion((1, 0, 0), 3.14159 / 2).to_matrix().to_4x4()
-    t = t0 @ t
+    t1 = Quaternion((1, 0, 0), 3.14159 / 2).to_matrix().to_4x4()
+    #t = t1 @ t0 @ t @ inv_t0
 
     print( "transform: ", t )
 
@@ -189,13 +195,22 @@ def _convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
 
 
 def _convert_colmap_to_blender_pt(rx, ry, rz):
+    t0 = Matrix( ( (1,  0, 0, 0), 
+                   (0,  0, 1, 0), 
+                   (0, -1, 0, 0), 
+                   (0,  0, 0, 1)) )
+    inv_t0 = t0.inverted()
+
     # COLMAP to Blender translation
     location = Vector((rx, ry, rz))
 
     # COLMAP to Blender rotation
     #colmap_quat = Quaternion((qw, qx, qy, qz))
-    t = Quaternion((1, 0, 0), -3.14159 / 2).to_matrix()
-    location = t @ location
+    t = Matrix.Identity( 4 )
+    t.translation = location
+    #t = t0 @ t @ inv_t0
+
+    location = t.translation
 
     print( "location: ", location )
 
