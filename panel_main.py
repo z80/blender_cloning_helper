@@ -114,6 +114,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 
         layout.label(text="Ref images")
         props = context.scene.photogrammetry_properties
+        layout.prop( props, 'show_point_cloud', expand=True )
         layout.prop( props, 'index', expand=True )
         layout.operator( "wm.place_camera", text="Place camera" )
 

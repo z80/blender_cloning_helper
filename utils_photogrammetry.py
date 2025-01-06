@@ -164,6 +164,12 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
         min=0
     )
 
+    show_point_cloud: bpy.props.BoolProperty( 
+        name='show_point_cloud', 
+        description='Whether the point cloud should be visualized or not', 
+        default=False
+    )
+
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
     points3d: bpy.props.CollectionProperty(type=Point3dProperties)
@@ -348,10 +354,12 @@ def get_photogrammetry_point3d_coordinates():
     """
     list_of_coords = []
     list_of_colors = []
-    points3d = bpy.context.scene.photogrammetry_properties.points3d
-    for pt in points3d:
-        list_of_coords.append( ( float(pt.pos[0]), float(pt.pos[1]), float(pt.pos[2]) ) )
-        list_of_colors.append( ( float(pt.color[0])/255.0, float(pt.color[1])/255.0, float(pt.color[2])/255.0, 1.0 ) )
+    show = bpy.context.scene.photogrammetry_properties.show_point_cloud
+    if show:
+        points3d = bpy.context.scene.photogrammetry_properties.points3d
+        for pt in points3d:
+            list_of_coords.append( ( float(pt.pos[0]), float(pt.pos[1]), float(pt.pos[2]) ) )
+            list_of_colors.append( ( float(pt.color[0])/255.0, float(pt.color[1])/255.0, float(pt.color[2])/255.0, 1.0 ) )
 
     return list_of_coords, list_of_colors
 
