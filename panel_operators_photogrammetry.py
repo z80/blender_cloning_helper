@@ -96,31 +96,16 @@ class WM_OT_FileSelector(bpy.types.Operator):
 
 
 
+# Operator to call COLMAP
+class WM_OT_PlaceCamera(bpy.types.Operator):
+    bl_idname = "wm.place_camera"
+    bl_label = "Place camera to the selected photogrammetry image pose"
 
+    def execute(self, context):
 
-# Define the property group
-class ImagePoseProperties(bpy.types.PropertyGroup):
-    image_path: bpy.props.StringProperty(
-        name="Image Path",
-        description="Path to the image",
-        default="",
-        subtype='FILE_PATH'
-    )
-    transform: bpy.props.FloatVectorProperty(
-        name="Transform",
-        size=16,
-        subtype='MATRIX',
-        default=[1.0, 0.0, 0.0, 0.0,  # 4x4 identity matrix
-                 0.0, 1.0, 0.0, 0.0,
-                 0.0, 0.0, 1.0, 0.0,
-                 0.0, 0.0, 0.0, 1.0]
-    )
-    fx: bpy.props.FloatProperty(name="fx")
-    fy: bpy.props.FloatProperty(name="fy")
-    cx: bpy.props.FloatProperty(name="cx")
-    cy: bpy.props.FloatProperty(name="cy")
+        set_camera_to_selected_image_pose()
 
-
+        return {'FINISHED'}
 
 
 
@@ -135,16 +120,14 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_CreateRefImages)
     bpy.utils.register_class(WM_OT_CallFfmpeg)
     bpy.utils.register_class(WM_OT_FileSelector)
-    bpy.utils.register_class(ImagePoseProperties)
-    bpy.types.Scene.photogrammetry_properties = bpy.props.PointerProperty(type=PhotogrammetryProperties)
+    bpy.utils.register_class(WM_OT_PlaceCamera)
 
 def unregister_photogrammetry():
     bpy.utils.unregister_class(WM_OT_CreateRefImages)
     bpy.utils.unregister_class(WM_OT_CallColmap)
     bpy.utils.unregister_class(WM_OT_CallFfmpeg)
     bpy.utils.unregister_class(WM_OT_FileSelector)
-    bpy.utils.unregister_class(ImagePoseProperties)
-    del bpy.types.Scene.image_pose_properties
+    bpy.utils.unregister_class(WM_OT_PlaceCamera)
 
 if __name__ == "__main__":
     register()

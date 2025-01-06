@@ -29,6 +29,7 @@ from panel_properties import *
 from panel_operators  import *
 from panel_draw       import *
 
+from utils_photogrammetry import *
 from panel_operators_photogrammetry import *
 
 
@@ -111,6 +112,11 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         layout.operator( "wm.call_colmap", text="Extract camera poses" )
         layout.operator( "wm.create_ref_images", text="Create Ref Images" )
 
+        layout.label(text="Ref images")
+        props = context.scene.photogrammetry_properties
+        layout.prop( props, 'index', expand=True )
+        layout.operator( "wm.place_camera", text="Place camera" )
+
 
 
 
@@ -119,6 +125,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 def register():
     register_properties()
     register_operators()
+    register_photogrammetry_props()
     register_photogrammetry()
     bpy.utils.register_class(MESH_PT_MeshEditPanel)
     bpy.utils.register_class(MESH_PT_ToolPathsPanel)
@@ -134,6 +141,8 @@ def unregister():
     unregister_operators()
     unregister_properties()
     unregister_photogrammetry()
+    unregister_photogrammetry_props()
+
     
     
 

@@ -126,10 +126,34 @@ class ImagePoseProperties(bpy.types.PropertyGroup):
                  0.0, 0.0, 1.0, 0.0,
                  0.0, 0.0, 0.0, 1.0]
     )
+    width:  bpy.props.FloatProperty(name="width")
+    height: bpy.props.FloatProperty(name="height")
     fx: bpy.props.FloatProperty(name="fx")
     fy: bpy.props.FloatProperty(name="fy")
     cx: bpy.props.FloatProperty(name="cx")
     cy: bpy.props.FloatProperty(name="cy")
+
+
+
+class Point3dProperties(bpy.types.PropertyGroup):
+
+    pos: bpy.props.FloatVectorProperty(
+        name="Position",
+        description="RGB color",
+        size=3,  # 3 components for XYZ
+        default=(0.0, 0.0, 0.0),
+        subtype='XYZ'  # Display as a 3D vector
+    )
+
+    color: bpy.props.FloatVectorProperty(
+        name="Color",
+        description="3D vector",
+        size=3,  # 3 components for XYZ
+        default=(0.0, 0.0, 0.0),
+        subtype='XYZ'  # Display as a color
+    )
+
+
 
 
 class PhotogrammetryProperties(bpy.types.PropertyGroup):
@@ -142,18 +166,18 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
 
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
+    points3d: bpy.props.CollectionProperty(type=Point3dProperties)
 
 
 
-
-def convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
+def _convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
     # COLMAP to Blender translation
     location = Vector((rx, ry, rz))
 
     # COLMAP to Blender rotation
     #colmap_quat = Quaternion((qw, qx, qy, qz))
     t = Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
-    t.translation = location * 5
+    t.translation = location #* 5
     # Swap axes for Blender
     t0 = Quaternion((1, 0, 0), 3.14159 / 2).to_matrix().to_4x4()
     t = t0 @ t
@@ -161,6 +185,21 @@ def convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
     print( "transform: ", t )
 
     return t
+
+
+
+def _convert_colmap_to_blender_pt(rx, ry, rz):
+    # COLMAP to Blender translation
+    location = Vector((rx, ry, rz))
+
+    # COLMAP to Blender rotation
+    #colmap_quat = Quaternion((qw, qx, qy, qz))
+    t = Quaternion((1, 0, 0), -3.14159 / 2).to_matrix()
+    location = t @ location
+
+    print( "location: ", location )
+
+    return location[0], location[1], location[2]
 
 
 def _read_images_file(filepath):
@@ -177,7 +216,7 @@ def _read_images_file(filepath):
         image_id = parts[0]
         qw, qx, qy, qz = map(float, parts[1:5])
         tx, ty, tz = map(float, parts[5:8])
-        t = convert_colmap_to_blender(tx, ty, tz, qw, qx, qy, qz)
+        t = _convert_colmap_to_blender(tx, ty, tz, qw, qx, qy, qz)
         camera_id = parts[8]
         image_name = parts[9]
         transform_matrix = t
@@ -218,6 +257,25 @@ def _read_cameras_file(filepath):
     return camera_intrinsics
 
 
+def _read_points3d_file(filepath):
+    points3D = []
+
+    with open(filepath, 'r') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        if line.startswith('#') or not line.strip():
+            continue
+        parts = line.split()
+        point_id = int(parts[0])
+        x, y, z = map(float, parts[1:4])
+        r, g, b = map(int, parts[4:7])
+        p = _convert_colmap_to_blender_pt(x, y, z)
+        #p = (x, y, z)
+        points3D.append(((p[0], p[1], p[2]), (r, g, b)))
+
+    return points3D
+
 
 
 
@@ -227,10 +285,12 @@ def populate_camera_poses():
     blender_file_dir = os.path.dirname(bpy.data.filepath)
     images_file_path = os.path.join(blender_file_dir, 'photogrammetry', 'images.txt')
     cameras_file_path = os.path.join(blender_file_dir, 'photogrammetry', 'cameras.txt')
+    points3d_file_path = os.path.join(blender_file_dir, 'photogrammetry', 'points3D.txt')
 
     # Read image poses and camera intrinsics
-    image_poses = _read_images_file(images_file_path)
+    image_poses       = _read_images_file(images_file_path)
     camera_intrinsics = _read_cameras_file(cameras_file_path)
+    points3d          = _read_points3d_file(points3d_file_path)
 
     # Create property groups
     bpy.context.scene.photogrammetry_properties.image_pose_properties.clear()
@@ -243,6 +303,8 @@ def populate_camera_poses():
         camera_id = list(camera_intrinsics.keys())[0]
         intrinsics = camera_intrinsics[camera_id]
         params = intrinsics['params']
+        item.width  = intrinsics['width']
+        item.height = intrinsics['height']
         if intrinsics['model'] == 'SIMPLE_PINHOLE':
             item.fx = item.fy = params[0]
             item.cx = params[1]
@@ -252,27 +314,46 @@ def populate_camera_poses():
             item.fy = params[1]
             item.cx = params[2]
             item.cy = params[3]
+    
+    # Store 3d points
+    bpy.context.scene.photogrammetry_properties.points3d.clear()
+    for pt in points3d:
+        item = bpy.context.scene.photogrammetry_properties.points3d.add()
+        item.pos   = pt[0]
+        item.color = pt[1]
+
+
+def get_photogrammetry_point3d_coordinates():
+    """
+    This is for drawing markers.
+    """
+    list_of_coords = []
+    points3d = bpy.context.scene.photogrammetry_properties.points3d
+    for pt in points3d:
+        list_of_coords.append( ( float(pt.pos[0]), float(pt.pos[1]), float(pt.pos[2]) ) )
+
+    return list_of_coords
 
 
 # Function to apply camera intrinsics and pose to the viewport
-def apply_camera_settings(camera_props):
+def _apply_camera_settings(camera_props):
     # Get the Blender camera
     camera = bpy.data.objects['Camera']
     
     # Set camera intrinsics
+    w  = camera_props.width
+    h  = camera_props.height
     fx = camera_props.fx
     fy = camera_props.fy
     cx = camera_props.cx
     cy = camera_props.cy
-    width = bpy.context.scene.render.resolution_x
-    height = bpy.context.scene.render.resolution_y
 
-    camera.data.lens = fx * (camera.data.sensor_width / width)
-    camera.data.shift_x = (width / 2 - cx) / width
-    camera.data.shift_y = (cy - height / 2) / height
+    camera.data.lens = fx
+    camera.data.sensor_width = 2.0 * cx
+    camera.data.sensor_height = 2.0 * cy
 
     # Set camera pose
-    transform_matrix = Matrix(camera_props.transform) #.transposed()
+    transform_matrix = Matrix(camera_props.transform).transposed()
     camera.matrix_world = transform_matrix
 
     # Set the viewport to camera view
@@ -283,10 +364,22 @@ def apply_camera_settings(camera_props):
                     space.region_3d.view_perspective = 'CAMERA'
 
 
+def set_camera_to_selected_image_pose():
+    index = bpy.context.scene.photogrammetry_properties.index
+    qty = len(bpy.context.scene.photogrammetry_properties.image_pose_properties)
+    if index >= qty:
+        return
+    camera_props = bpy.context.scene.photogrammetry_properties.image_pose_properties[index]
+    _apply_camera_settings(camera_props)
+
+
+
 def _create_image_object(camera_props, offset_distance=1.0):
     # Load the image
     image_path = camera_props.image_path
     image_name = os.path.basename(image_path)
+    image_width = camera_props.width
+    fx          = camera_props.fx
     image = bpy.data.images.load(image_path)
 
     # Create a reference image object
@@ -295,20 +388,20 @@ def _create_image_object(camera_props, offset_distance=1.0):
 
     ref_image = bpy.context.object
     ref_image.name = f"RefImage_{image_name}"
-    #ref_image.data = image
-    #ref_image.empty_image_offset = (0.5, 0.5)
-    #ref_image.empty_image_depth = 'DEFAULT'
-    
-    # Get the aspect ratio of the image
-    aspect_ratio = image.size[0] / image.size[1]
-    ref_image.scale = (aspect_ratio, 1, 1)
+    # I define the offset_distance, then image physical width should be 
+    # size = offset_distance * image_width / fx
+    ref_image.empty_display_size = offset_distance * image_width / fx
+    ref_image.use_empty_image_alpha = True
+    ref_image.color[3] = 0.5
 
+    
     # Set the reference image's transformation matrix
     transform_matrix = Matrix(camera_props.transform).transposed()
 
     # Offset the reference image slightly in front of the camera
     #offset_vector = transform_matrix.to_3x3().inverted() @ Vector((0, 0, -offset_distance))
-    #transform_matrix.translation += offset_vector
+    offset_vector = transform_matrix.to_3x3() @ Vector((0, 0, -offset_distance))
+    transform_matrix.translation += offset_vector
 
     ref_image.matrix_world = transform_matrix
     # Make the image non-selectable
@@ -316,14 +409,14 @@ def _create_image_object(camera_props, offset_distance=1.0):
 
 
 def create_ref_images( offset_distance=1.0 ):
-    props = bpy.context.scene.image_pose_properties
+    props = bpy.context.scene.photogrammetry_properties.image_pose_properties
     for prop in props:
         _create_image_object( prop, offset_distance )
 
 
 
 
-def setup_stencil_painting( camera_props )
+def setup_stencil_painting( camera_props ):
     # Load the image
     image_path = camera_props.image_path
     image = bpy.data.images.load(image_path)
@@ -349,5 +442,28 @@ def setup_stencil_painting( camera_props )
     brush.texture_slot.mask_angle = 0.0  # Angle in radians
     brush.texture_slot.mask_location = (0.5, 0.5)  # Position in UV space (X, Y)
     brush.texture_slot.mask_scale = (1.0, 1.0)  # Scale in UV space (X, Y)
+
+
+
+
+
+
+
+
+
+def register_photogrammetry_props():
+    bpy.utils.register_class(ImagePoseProperties)
+    bpy.utils.register_class(Point3dProperties)
+    bpy.utils.register_class(PhotogrammetryProperties)
+    bpy.types.Scene.photogrammetry_properties = bpy.props.PointerProperty(type=PhotogrammetryProperties)
+
+def unregister_photogrammetry_props():
+    bpy.utils.unregister_class(Point3dProperties)
+    bpy.utils.unregister_class(ImagePoseProperties)
+    bpy.utils.unregister_class(PhotogrammetryProperties)
+    del bpy.types.Scene.photogrammetry_properties
+
+
+
 
 
