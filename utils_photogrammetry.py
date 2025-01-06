@@ -347,11 +347,13 @@ def get_photogrammetry_point3d_coordinates():
     This is for drawing markers.
     """
     list_of_coords = []
+    list_of_colors = []
     points3d = bpy.context.scene.photogrammetry_properties.points3d
     for pt in points3d:
         list_of_coords.append( ( float(pt.pos[0]), float(pt.pos[1]), float(pt.pos[2]) ) )
+        list_of_colors.append( ( float(pt.color[0])/255.0, float(pt.color[1])/255.0, float(pt.color[2])/255.0, 1.0 ) )
 
-    return list_of_coords
+    return list_of_coords, list_of_colors
 
 
 # Function to apply camera intrinsics and pose to the viewport
