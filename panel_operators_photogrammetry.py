@@ -4,6 +4,7 @@ import os
 import subprocess
 
 from utils_photogrammetry import *
+from utils_stencil import *
 
 # Operator to call COLMAP
 class WM_OT_CallColmap(bpy.types.Operator):
@@ -108,6 +109,18 @@ class WM_OT_PlaceCamera(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Operator to call COLMAP
+class WM_OT_AlignStencil(bpy.types.Operator):
+    bl_idname = "wm.align_stencil"
+    bl_label = "Make brush stencil image match the reference image"
+
+    def execute(self, context):
+
+        align_stencil_to_viewport()
+
+        return {'FINISHED'}
+
+
 
 
 
@@ -121,6 +134,7 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_CallFfmpeg)
     bpy.utils.register_class(WM_OT_FileSelector)
     bpy.utils.register_class(WM_OT_PlaceCamera)
+    bpy.utils.register_class(WM_OT_AlignStencil)
 
 def unregister_photogrammetry():
     bpy.utils.unregister_class(WM_OT_CreateRefImages)
@@ -128,6 +142,7 @@ def unregister_photogrammetry():
     bpy.utils.unregister_class(WM_OT_CallFfmpeg)
     bpy.utils.unregister_class(WM_OT_FileSelector)
     bpy.utils.unregister_class(WM_OT_PlaceCamera)
+    bpy.utils.unregister_class(WM_OT_AlignStencil)
 
 if __name__ == "__main__":
     register()
