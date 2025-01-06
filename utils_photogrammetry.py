@@ -164,6 +164,25 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
         min=0
     )
 
+    additional_displacement: bpy.props.FloatVectorProperty(
+        name="Additional Displacement",
+        description="Photogrammetry poses displacement",
+        size=3,  # 3 components for XYZ
+        default=(0.0, 0.0, 0.0),
+        subtype='XYZ'  # Display as a color
+    )
+
+    additional_rotation: FloatVectorProperty( 
+        name="Additional Rotation", 
+        description="Photogrammetry additional rotation as Euler angles", 
+        default=(0.0, 0.0, 0.0), 
+        subtype='EULER' )
+
+    additional_scale: FloatProperty( 
+        name="Additional Scale", 
+        description="Photogrammetry additional scale", 
+        default=1.0 )
+
     show_point_cloud: bpy.props.BoolProperty( 
         name='Show point cloud', 
         description='Whether the point cloud should be visualized or not', 
