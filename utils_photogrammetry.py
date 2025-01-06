@@ -1,11 +1,13 @@
 
 import bpy
 import os
+import math
 import subprocess
 import numpy as np
 from mathutils import Matrix, Quaternion, Vector
 
-def extract_frames_with_ffmpeg(video_path, ffmpeg_path, start_time, end_time, frames_qty, seconds_qty):
+
+def extract_frames_with_ffmpeg(video_path, ffmpeg_path, start_time, end_time, frames_qty, seconds_qty, scale_percentage=20.0 ):
     # Get the directory of the current Blender file
     blender_file_dir = os.path.dirname(bpy.data.filepath)
     
@@ -27,8 +29,6 @@ def extract_frames_with_ffmpeg(video_path, ffmpeg_path, start_time, end_time, fr
     hours, minutes, seconds = map(float, duration_str.split(":"))
     video_duration = hours * 3600 + minutes * 60 + seconds
 
-    print( 'Video duration is ' + str(video_duration) + ' seconds' )
-
     # Adjust start time and end time
     start_time = max(0, start_time)
     if end_time < 0 or end_time > video_duration:
@@ -37,15 +37,23 @@ def extract_frames_with_ffmpeg(video_path, ffmpeg_path, start_time, end_time, fr
     # Calculate FPS
     fps = frames_qty / seconds_qty
 
-    # FFmpeg command to extract frames
+    # Calculate scale factor
+    scale_factor = scale_percentage / 100
+
+    # FFmpeg command to extract and scale frames
     ffmpeg_command = [
         ffmpeg_path,
         '-i', video_path,
-        '-vf', f"fps={fps},trim=start={start_time}:end={end_time}",
+        '-vf', f"fps={fps},scale=iw*{scale_factor}:ih*{scale_factor},trim=start={start_time}:end={end_time}",
         os.path.join(images_path, 'frame_%04d.png')
     ]
 
+    # Run FFmpeg command
+    subprocess.run(ffmpeg_command)
+
     print( "Done" )
+
+
 
 
 
@@ -70,15 +78,19 @@ def call_colmap(colmap_path):
     if not os.path.isfile(colmap_path):
         print(f"Invalid COLMAP path: {colmap_path}")
         return
+    
+    #print( "Creating the database" )
 
     # Call COLMAP commands using the subprocess module
     print( "Extracting features" )
     subprocess.run([colmap_path, "feature_extractor", 
                     "--database_path", database_path,
-                    "--image_path", image_path])
+                    "--image_path", image_path, 
+                    '--ImageReader.camera_model', 'PINHOLE', 
+                    '--ImageReader.single_camera', '1']) 
 
     print( "Running matcher" )
-    subprocess.run([colmap_path, "matcher",
+    subprocess.run([colmap_path, "exhaustive_matcher",
                     "--database_path", database_path])
 
     print( "Running mapper" )
@@ -97,26 +109,78 @@ def call_colmap(colmap_path):
 
 
 
+# Define the property group
+class ImagePoseProperties(bpy.types.PropertyGroup):
+    image_path: bpy.props.StringProperty(
+        name="Image Path",
+        description="Path to the image",
+        default="",
+        subtype='FILE_PATH'
+    )
+    transform: bpy.props.FloatVectorProperty(
+        name="Transform",
+        size=16,
+        subtype='MATRIX',
+        default=[1.0, 0.0, 0.0, 0.0,  # 4x4 identity matrix
+                 0.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0]
+    )
+    fx: bpy.props.FloatProperty(name="fx")
+    fy: bpy.props.FloatProperty(name="fy")
+    cx: bpy.props.FloatProperty(name="cx")
+    cy: bpy.props.FloatProperty(name="cy")
+
+
+
+def convert_colmap_to_blender(rx, ry, rz, qw, qx, qy, qz):
+    # COLMAP to Blender translation
+    location = Vector((rx, ry, rz))
+
+    # COLMAP to Blender rotation
+    #colmap_quat = Quaternion((qw, qx, qy, qz))
+    t = Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
+    t.translation = location * 5
+    # Swap axes for Blender
+    t0 = Quaternion((1, 0, 0), 3.14159 / 2).to_matrix().to_4x4()
+    t = t0 @ t
+
+    print( "transform: ", t )
+
+    return t
+
+
 def _read_images_file(filepath):
     image_poses = {}
-    with open(filepath, 'r') as file:
-        lines = file.readlines()
 
-    for line in lines:
-        if line.startswith('#') or not line.strip():
-            continue
+    # Read the file and skip lines starting with #
+    with open(filepath, 'r') as file:
+        lines = [line for line in file if not line.startswith('#') and line.strip()]
+
+    # Process the remaining lines in pairs
+    for i in range(0, len(lines), 2):
+        line = lines[i]
         parts = line.split()
         image_id = parts[0]
         qw, qx, qy, qz = map(float, parts[1:5])
         tx, ty, tz = map(float, parts[5:8])
-        image_name = parts[-1]
-        transform_matrix = Matrix.Identity(4)
-        transform_matrix.translation = Vector((tx, ty, tz))
-        transform_matrix @= Quaternion((qw, qx, qy, qz)).to_matrix().to_4x4()
+        t = convert_colmap_to_blender(tx, ty, tz, qw, qx, qy, qz)
+        camera_id = parts[8]
+        image_name = parts[9]
+        transform_matrix = t
+        
+        # Apply the conversion to Blender's reference frame
+        #transform_matrix = rot_180_x @ colmap_to_blender @ transform_matrix @ colmap_to_blender.inverted()
+        
         image_poses[image_name] = {
-            'transform': transform_matrix
+            'transform': transform_matrix,
+            'camera_id': camera_id
         }
+
     return image_poses
+
+
+
 
 def _read_cameras_file(filepath):
     camera_intrinsics = {}
@@ -152,8 +216,8 @@ def populate_camera_poses():
     cameras_file_path = os.path.join(blender_file_dir, 'photogrammetry', 'cameras.txt')
 
     # Read image poses and camera intrinsics
-    image_poses = read_images_file(images_file_path)
-    camera_intrinsics = read_cameras_file(cameras_file_path)
+    image_poses = _read_images_file(images_file_path)
+    camera_intrinsics = _read_cameras_file(cameras_file_path)
 
     # Create property groups
     bpy.context.scene.image_pose_properties.clear()
@@ -195,7 +259,7 @@ def apply_camera_settings(camera_props):
     camera.data.shift_y = (cy - height / 2) / height
 
     # Set camera pose
-    transform_matrix = Matrix(camera_props.transform).transposed()
+    transform_matrix = Matrix(camera_props.transform) #.transposed()
     camera.matrix_world = transform_matrix
 
     # Set the viewport to camera view
@@ -206,19 +270,21 @@ def apply_camera_settings(camera_props):
                     space.region_3d.view_perspective = 'CAMERA'
 
 
-def create_image_object(camera_props, offset_distance=1.0):
+def _create_image_object(camera_props, offset_distance=1.0):
     # Load the image
     image_path = camera_props.image_path
     image_name = os.path.basename(image_path)
     image = bpy.data.images.load(image_path)
 
     # Create a reference image object
-    bpy.ops.object.add(type='EMPTY', empty_draw_type='IMAGE')
+    #bpy.ops.object.empty_add(type='IMAGE', radius=1)
+    bpy.ops.object.load_reference_image(filepath=image_path)
+
     ref_image = bpy.context.object
     ref_image.name = f"RefImage_{image_name}"
-    ref_image.data = image
-    ref_image.empty_image_offset = (0.5, 0.5)
-    ref_image.empty_image_depth = 'DEFAULT'
+    #ref_image.data = image
+    #ref_image.empty_image_offset = (0.5, 0.5)
+    #ref_image.empty_image_depth = 'DEFAULT'
     
     # Get the aspect ratio of the image
     aspect_ratio = image.size[0] / image.size[1]
@@ -228,8 +294,17 @@ def create_image_object(camera_props, offset_distance=1.0):
     transform_matrix = Matrix(camera_props.transform).transposed()
 
     # Offset the reference image slightly in front of the camera
-    offset_vector = transform_matrix.to_3x3().inverted() @ Vector((0, 0, -offset_distance))
-    transform_matrix.translation += offset_vector
+    #offset_vector = transform_matrix.to_3x3().inverted() @ Vector((0, 0, -offset_distance))
+    #transform_matrix.translation += offset_vector
 
     ref_image.matrix_world = transform_matrix
+    # Make the image non-selectable
+    ref_image.hide_select = True
+
+
+def create_ref_images( offset_distance=1.0 ):
+    props = bpy.context.scene.image_pose_properties
+    for prop in props:
+        _create_image_object( prop, offset_distance )
+
 

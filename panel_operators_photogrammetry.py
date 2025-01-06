@@ -23,6 +23,19 @@ class WM_OT_CallColmap(bpy.types.Operator):
         return {'FINISHED'}
 
 
+# Operator to call COLMAP
+class WM_OT_CreateRefImages(bpy.types.Operator):
+    bl_idname = "wm.create_ref_images"
+    bl_label = "Create Reference Images"
+
+    def execute(self, context):
+
+        populate_camera_poses()
+        create_ref_images()
+
+        return {'FINISHED'}
+
+
 
 
 # Operator to call FFmpeg
@@ -113,14 +126,20 @@ class ImagePoseProperties(bpy.types.PropertyGroup):
 
 
 
+
+
+
+
 def register_photogrammetry():
     bpy.utils.register_class(WM_OT_CallColmap)
+    bpy.utils.register_class(WM_OT_CreateRefImages)
     bpy.utils.register_class(WM_OT_CallFfmpeg)
     bpy.utils.register_class(WM_OT_FileSelector)
     bpy.utils.register_class(ImagePoseProperties)
     bpy.types.Scene.image_pose_properties = bpy.props.CollectionProperty(type=ImagePoseProperties)
 
 def unregister_photogrammetry():
+    bpy.utils.unregister_class(WM_OT_CreateRefImages)
     bpy.utils.unregister_class(WM_OT_CallColmap)
     bpy.utils.unregister_class(WM_OT_CallFfmpeg)
     bpy.utils.unregister_class(WM_OT_FileSelector)
