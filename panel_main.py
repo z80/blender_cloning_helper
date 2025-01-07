@@ -107,16 +107,24 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         layout.operator( "wm.call_ffmpeg", text="Extract frames" )
 
 
+        props = context.scene.photogrammetry_properties
+
         layout.prop(tool_paths, "colmap_path")
 
         layout.operator( "wm.call_colmap", text="Extract camera poses" )
+        
+        layout.prop( props, 'additional_displacement', expand=True )
+        layout.prop( props, 'additional_rotation', expand=True )
+        layout.prop( props, 'additional_scale', expand=True )
         layout.operator( "wm.create_ref_images", text="Create Ref Images" )
 
         layout.label(text="Ref images")
-        props = context.scene.photogrammetry_properties
         layout.prop( props, 'show_point_cloud', expand=True )
         layout.prop( props, 'index', expand=True )
         layout.operator( "wm.place_camera", text="Place camera" )
+
+
+        layout.label(text="Texture paint stencil")
         layout.prop( props, 'stencil_scale_adj', expand=True )
         layout.operator( "wm.align_stencil", text="Align stencil" )
 

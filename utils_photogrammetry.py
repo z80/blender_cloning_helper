@@ -4,6 +4,7 @@ import os
 import math
 import subprocess
 import numpy as np
+import mathutils
 from mathutils import Matrix, Quaternion, Vector
 
 
@@ -159,7 +160,7 @@ class Point3dProperties(bpy.types.PropertyGroup):
 class PhotogrammetryProperties(bpy.types.PropertyGroup):
     index: bpy.props.IntProperty( 
         name='index', 
-        description='Vertex index of the anchor point', 
+        description='Index of the photogrammetry camera pose to align Blender camera to', 
         default=0, 
         min=0
     )
@@ -172,13 +173,13 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
         subtype='XYZ'  # Display as a color
     )
 
-    additional_rotation: FloatVectorProperty( 
+    additional_rotation: bpy.props.FloatVectorProperty( 
         name="Additional Rotation", 
         description="Photogrammetry additional rotation as Euler angles", 
         default=(0.0, 0.0, 0.0), 
         subtype='EULER' )
 
-    additional_scale: FloatProperty( 
+    additional_scale: bpy.props.FloatProperty( 
         name="Additional Scale", 
         description="Photogrammetry additional scale", 
         default=1.0 )
@@ -200,6 +201,24 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
     points3d: bpy.props.CollectionProperty(type=Point3dProperties)
+
+
+
+def _get_adjustment_transform():
+    # Coordinates for displacement
+    displacement = bpy.context.scene.photogrammetry_properties.additional_displacement
+    # Euler rotation angles (in degrees)
+    rotation_degrees = bpy.context.scene.photogrammetry_properties.additional_rotation
+    rotation_radians = rotation_degrees #tuple(math.radians(angle) for angle in rotation_degrees)
+    # Scale
+    scale = bpy.context.scene.photogrammetry_properties.additional_scale
+    # Create translation, rotation, and scale matrices
+    trans_mat = mathutils.Matrix.Translation(displacement)
+    rot_mat = mathutils.Euler(rotation_radians).to_matrix().to_4x4()
+    scale_mat = mathutils.Matrix.Scale(scale, 4)
+    # Combine the matrices to form the transformation matrix
+    transform_mat = trans_mat @ rot_mat @ scale_mat
+    return transform_mat
 
 
 
@@ -249,13 +268,15 @@ def _convert_colmap_to_blender_pt(rx, ry, rz):
 
     location = t.translation
 
-    print( "location: ", location )
+    #print( "location: ", location )
 
-    return location[0], location[1], location[2]
+    return location
 
 
 def _read_images_file(filepath):
     image_poses = {}
+
+    t_additional = _get_adjustment_transform()
 
     # Read the file and skip lines starting with #
     with open(filepath, 'r') as file:
@@ -269,6 +290,7 @@ def _read_images_file(filepath):
         qw, qx, qy, qz = map(float, parts[1:5])
         tx, ty, tz = map(float, parts[5:8])
         t = _convert_colmap_to_blender(tx, ty, tz, qw, qx, qy, qz)
+        t = t_additional @ t
         camera_id = parts[8]
         image_name = parts[9]
         transform_matrix = t
@@ -312,6 +334,8 @@ def _read_cameras_file(filepath):
 def _read_points3d_file(filepath):
     points3D = []
 
+    t_additional = _get_adjustment_transform()
+
     with open(filepath, 'r') as file:
         lines = file.readlines()
 
@@ -323,6 +347,7 @@ def _read_points3d_file(filepath):
         x, y, z = map(float, parts[1:4])
         r, g, b = map(int, parts[4:7])
         p = _convert_colmap_to_blender_pt(x, y, z)
+        p = t_additional @ p
         #p = (x, y, z)
         points3D.append(((p[0], p[1], p[2]), (r, g, b)))
 
