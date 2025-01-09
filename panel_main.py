@@ -1,16 +1,4 @@
 
-bl_info = {
-    "name": "Some IGL bindings for mesh manipulation", 
-    "author": "z80", 
-    "version": (0, 0, 1), 
-    "blender": (3, 6, 0), 
-    "location": "3D Viewport > Sidebar > 1.21GW", 
-    "description": "Some IGL bindings to ease mesh fitting", 
-    "category": "Development", 
-}
-
-
-
 import bpy
 import bmesh
 import mathutils

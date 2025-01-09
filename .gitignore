@@ -3,3 +3,8 @@ blender_project
 *.blend
 *.blend1
 __pycache__
+__temp
+colmap
+images
+photogrammetry
+
