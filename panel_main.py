@@ -22,8 +22,6 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append( dir )
     
-import install_needed_packages_2
-
 import utils_main
 from panel_properties import *
 from panel_operators  import *
@@ -32,6 +30,7 @@ from panel_draw       import *
 from utils_photogrammetry import *
 from panel_operators_photogrammetry import *
 
+from utils_packages_install import *
 
 class MESH_PT_MeshEditPanel(bpy.types.Panel):
     bl_label = "Elastic mesh"
@@ -133,22 +132,55 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
 
 
 
+class MESH_PT_MeshInstallPackages(bpy.types.Panel):
+    bl_label = "Install packages"
+    bl_idname = "VIEW3D_PT_mesh_install_packages"
+    bl_space_type = 'VIEW_3D'
+    bl_region_type = 'UI'
+    bl_category = "Install Packages"
+
+    def draw(self, context):
+        layout = self.layout
+
+        layout.label( text="The plugin needs" )
+        layout.label( "numpy and scipy" )
+        layout.label( "Press the button to install" )
+        layout.label( "and restart Blender" )
+        layout.operator("mesh.mesh_install_packages", text="Install")
+
+
+
+
+
+
+
+
+need_packages = False
+
 def register():
     register_properties()
     register_operators()
     register_photogrammetry_props()
     register_photogrammetry()
-    bpy.utils.register_class(MESH_PT_MeshEditPanel)
-    bpy.utils.register_class(MESH_PT_ToolPathsPanel)
+    global need_packages
+    need_packages = need_packages_installed()
+    if need_packages:
+        bpy.utils.register_class(MESH_PT_MeshInstallPackages)
+    else:
+        bpy.utils.register_class(MESH_PT_MeshEditPanel)
+        bpy.utils.register_class(MESH_PT_ToolPathsPanel)
 
     register_draw()
 
 
 def unregister():
     unregister_draw()
-
-    bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
-    bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
+    global need_packages
+    if need_packages:
+        bpy.utils.unregister_class(MESH_PT_MeshInstallPackages)
+    else:
+        bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
+        bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
     unregister_operators()
     unregister_properties()
     unregister_photogrammetry()

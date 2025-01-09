@@ -5,7 +5,9 @@ import subprocess
 import sys
 import os
 
-def check_for_packages():
+import bpy
+
+def need_packages_installed():
     #import pdb
     #pdb.set_trace()
     try:
@@ -13,9 +15,9 @@ def check_for_packages():
         import scipy
     
     except:
-        return False
+        return True
     
-    return True
+    return False
 
 
 def install_needed_packages():
@@ -30,4 +32,36 @@ def install_needed_packages():
     subprocess.call([python_exe, '-m', 'pip', 'install', '--upgrade', 'scipy', '-t', target])
      
     print('DONE')
+
+
+
+# Operator to call COLMAP
+class WM_OT_MeshInstallPackages(bpy.types.Operator):
+    bl_idname = "wm.mesh_install_packages"
+    bl_label = "Install needed packages"
+
+    def execute(self, context):
+
+        install_needed_packages()
+
+        return {'FINISHED'}
+
+
+
+def register_install_packages():
+    bpy.utils.register_class(WM_OT_CallColmap)
+
+def unregister_install_packages():
+    bpy.utils.unregister_class(WM_OT_CreateRefImages)
+
+if __name__ == "__main__":
+    register_install_packages()
+
+
+
+
+
+
+
+
 
