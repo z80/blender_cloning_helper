@@ -3,6 +3,7 @@ blender_project
 *.blend
 *.blend1
 __pycache__
+_temp
 __temp
 colmap
 images
