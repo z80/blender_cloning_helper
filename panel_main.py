@@ -10,15 +10,17 @@ dir = os.path.dirname(bpy.data.filepath)
 if not dir in sys.path:
     sys.path.append( dir )
     
-import utils_main
-from panel_properties import *
-from panel_operators  import *
-from panel_draw       import *
-
-from utils_photogrammetry import *
-from panel_operators_photogrammetry import *
-
 from utils_packages_install import *
+need_packages = need_packages_installed()
+
+if not need_packages:
+    from panel_properties import *
+    from panel_operators  import *
+    from panel_draw       import *
+
+    from utils_photogrammetry import *
+    from panel_operators_photogrammetry import *
+
 
 class MESH_PT_MeshEditPanel(bpy.types.Panel):
     bl_label = "Elastic mesh"
@@ -130,11 +132,11 @@ class MESH_PT_MeshInstallPackages(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
 
-        layout.label( text="The plugin needs" )
-        layout.label( "numpy and scipy" )
-        layout.label( "Press the button to install" )
-        layout.label( "and restart Blender" )
-        layout.operator("mesh.mesh_install_packages", text="Install")
+        layout.label( text="The plugin needs numpy and scipy!" )
+        layout.label( text="Press the button to install and restart Blender." )
+        layout.label( text="On Windows sometimes it complains about access rights." )
+        layout.label( text="If it does and fails, just repeat it again!" )
+        layout.operator("wm.mesh_install_packages", text="Install")
 
 
 
@@ -143,36 +145,36 @@ class MESH_PT_MeshInstallPackages(bpy.types.Panel):
 
 
 
-need_packages = False
 
 def register():
-    register_properties()
-    register_operators()
-    register_photogrammetry_props()
-    register_photogrammetry()
     global need_packages
-    need_packages = need_packages_installed()
     if need_packages:
+        register_install_packages()
         bpy.utils.register_class(MESH_PT_MeshInstallPackages)
     else:
+        register_properties()
+        register_operators()
+        register_photogrammetry_props()
+        register_photogrammetry()
         bpy.utils.register_class(MESH_PT_MeshEditPanel)
         bpy.utils.register_class(MESH_PT_ToolPathsPanel)
 
-    register_draw()
+        register_draw()
 
 
 def unregister():
-    unregister_draw()
     global need_packages
     if need_packages:
         bpy.utils.unregister_class(MESH_PT_MeshInstallPackages)
+        unregister_install_packages()
     else:
         bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
         bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
-    unregister_operators()
-    unregister_properties()
-    unregister_photogrammetry()
-    unregister_photogrammetry_props()
+        unregister_draw()
+        unregister_operators()
+        unregister_properties()
+        unregister_photogrammetry()
+        unregister_photogrammetry_props()
 
     
     

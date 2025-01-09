@@ -49,10 +49,10 @@ class WM_OT_MeshInstallPackages(bpy.types.Operator):
 
 
 def register_install_packages():
-    bpy.utils.register_class(WM_OT_CallColmap)
+    bpy.utils.register_class(WM_OT_MeshInstallPackages)
 
 def unregister_install_packages():
-    bpy.utils.unregister_class(WM_OT_CreateRefImages)
+    bpy.utils.unregister_class(WM_OT_MeshInstallPackages)
 
 if __name__ == "__main__":
     register_install_packages()
