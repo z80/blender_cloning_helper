@@ -1,4 +1,10 @@
 
+bl_info = {
+    "name": "Object cloning helper", 
+    "blender": (3, 6, 0), 
+    "category": "3D View", 
+}
+
 import bpy
 import bmesh
 import mathutils
