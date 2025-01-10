@@ -30,7 +30,8 @@ class WM_OT_CreateRefImages(bpy.types.Operator):
     bl_label = "Create Reference Images"
 
     def execute(self, context):
-
+        
+        delete_ref_images()
         populate_camera_poses()
         create_ref_images()
 

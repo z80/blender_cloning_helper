@@ -3,6 +3,8 @@ import bpy
 import mathutils
 import bpy_extras.view3d_utils as v3du
 
+from utils_photogrammetry import *
+
 def _project_to_screen(vector, region, rv3d):
     return v3du.location_3d_to_region_2d(region, rv3d, vector)
 
@@ -23,7 +25,13 @@ def _get_reference_image(obj):
 def align_stencil_to_viewport():
     #import pdb
     #pdb.set_trace()
-    obj = bpy.context.object
+    index = bpy.context.scene.photogrammetry_properties.index
+    hide_all_images()
+
+    prop = bpy.context.scene.photogrammetry_properties.image_pose_properties[index]
+    object_name = prop.object_name
+
+    obj = bpy.data.objects.get( object_name )
     reference_image = _get_reference_image(obj)
     reference_aspect_ratio = reference_image.size[0] / reference_image.size[1]
     

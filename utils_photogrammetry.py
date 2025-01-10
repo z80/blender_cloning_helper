@@ -118,6 +118,13 @@ class ImagePoseProperties(bpy.types.PropertyGroup):
         default="",
         subtype='FILE_PATH'
     )
+
+    object_name: bpy.props.StringProperty(
+        name="Image Object Name",
+        description="Reference image object name",
+        default=""
+    )
+
     transform: bpy.props.FloatVectorProperty(
         name="Transform",
         size=16,
@@ -445,11 +452,14 @@ def _apply_camera_settings(camera_props):
                     space.region_3d.view_perspective = 'CAMERA'
 
 
+
 def set_camera_to_selected_image_pose():
     index = bpy.context.scene.photogrammetry_properties.index
     qty = len(bpy.context.scene.photogrammetry_properties.image_pose_properties)
     if index >= qty:
         return
+    hide_all_images()
+    _show_one_image( index )
     camera_props = bpy.context.scene.photogrammetry_properties.image_pose_properties[index]
     _apply_camera_settings(camera_props)
 
@@ -487,6 +497,34 @@ def _create_image_object(camera_props, offset_distance=1.0):
     ref_image.matrix_world = transform_matrix
     # Make the image non-selectable
     ref_image.hide_select = True
+    
+    # Store reference image object name.
+    camera_props.object_name = ref_image.name
+
+
+
+def delete_ref_images():
+    props = bpy.context.scene.photogrammetry_properties.image_pose_properties
+    # First, iterate over all props and delete old objects if there are any.
+    for prop in props:
+        obj = bpy.data.objects.get( prop.object_name )
+        if obj is not None:
+            print( "Deleting the object " + prop.object_name )
+            # Make the object visible in the viewport
+            obj.hide_viewport = False
+            # Make the object visible in renders
+            obj.hide_render = False
+            # Make the object selectable again.
+            obj.hide_select = False
+            # Set the object as active
+            bpy.context.view_layer.objects.active = obj
+            obj.select_set(True)
+            # Ensure you are in the correct context
+            bpy.ops.object.select_all(action='DESELECT')
+            obj.select_set(True)
+            # Delete the object
+            bpy.ops.object.delete()
+
 
 
 def create_ref_images( offset_distance=1.0 ):
@@ -497,7 +535,28 @@ def create_ref_images( offset_distance=1.0 ):
 
 
 
-def setup_stencil_painting( camera_props ):
+def hide_all_images():
+    props = bpy.context.scene.photogrammetry_properties.image_pose_properties
+    # First, iterate over all props and delete old objects if there are any.
+    for prop in props:
+        obj = bpy.data.objects.get( prop.object_name )
+        if obj is not None:
+            obj.hide_viewport = True
+            obj.hide_select   = True
+
+def _show_one_image( index ):
+    props = bpy.context.scene.photogrammetry_properties.image_pose_properties
+    qty = len(props)
+    if index >= 0 and index < qty:
+        prop = props[index]
+        obj = bpy.data.objects.get( prop.object_name )
+        if obj is not None:
+            obj.hide_viewport = False
+
+
+
+
+def _NOT_USED_setup_stencil_painting( camera_props ):
     # Load the image
     image_path = camera_props.image_path
     image = bpy.data.images.load(image_path)
