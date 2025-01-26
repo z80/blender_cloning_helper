@@ -109,6 +109,16 @@ def call_colmap(colmap_path):
     print( "Done" )
 
 
+def _get_camera_images(self, context):
+    items = [(item.object_name, item.object_name, "") for item in context.scene.photogrammetry_properties.image_pose_properties]
+    return items
+
+
+
+def _camera_image_selected(self, context):
+    bpy.ops.scene.camera_images_operator()
+
+
 
 # Define the property group
 class ImagePoseProperties(bpy.types.PropertyGroup):
@@ -208,6 +218,38 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
     points3d: bpy.props.CollectionProperty(type=Point3dProperties)
+    
+    # This is purely for visualizing the list of ref. images.
+    camera_images_items: bpy.props.EnumProperty(
+        name="Camera Image",
+        items=_get_camera_images,
+        update=_camera_image_selected
+    )
+
+
+
+class CameraImagesOperator(bpy.types.Operator):
+    bl_idname = "scene.camera_images_operator"
+    bl_label = "Camera Images Operator"
+    bl_options = {'REGISTER', 'UNDO'}
+
+    def execute(self, context):
+        scene = context.scene
+        selected_item_name = scene.photogrammetry_properties.camera_images_items
+
+        # Find the index of the selected item
+        selected_index = -1
+        for i, item in enumerate(scene.photogrammetry_properties.image_pose_properties):
+            if item.object_name == selected_item_name:
+                scene.photogrammetry_properties.index = i
+                # Align camera
+                set_camera_to_selected_image_pose()
+                break
+
+        self.report({'INFO'}, f"Selected Item: {selected_item}")
+        return {'FINISHED'}
+
+
 
 
 
@@ -475,7 +517,17 @@ def _create_image_object(camera_props, offset_distance=1.0):
 
     # Create a reference image object
     #bpy.ops.object.empty_add(type='IMAGE', radius=1)
-    bpy.ops.object.load_reference_image(filepath=image_path)
+    version = bpy.app.version
+    if version[0] == 4:
+        if version[1] < 2:
+            # This is for v4.1.1
+            bpy.ops.object.load_reference_image(filepath=image_path)
+        else:
+            # And this is for v4.3.2
+            bpy.ops.object.empty_image_add(filepath=image_path)
+    else:
+        bpy.ops.object.empty_image_add(filepath=image_path)
+
 
     ref_image = bpy.context.object
     ref_image.name = f"RefImage_{image_name}"
@@ -592,6 +644,7 @@ def _NOT_USED_setup_stencil_painting( camera_props ):
 
 
 def register_photogrammetry_props():
+    bpy.utils.register_class(CameraImagesOperator)
     bpy.utils.register_class(ImagePoseProperties)
     bpy.utils.register_class(Point3dProperties)
     bpy.utils.register_class(PhotogrammetryProperties)
@@ -601,6 +654,7 @@ def unregister_photogrammetry_props():
     bpy.utils.unregister_class(Point3dProperties)
     bpy.utils.unregister_class(ImagePoseProperties)
     bpy.utils.unregister_class(PhotogrammetryProperties)
+    bpy.utils.unregister_class(CameraImagesOperator)
     del bpy.types.Scene.photogrammetry_properties
 
 
