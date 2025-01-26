@@ -274,8 +274,7 @@ def remove_selected_anchors( mesh ):
 
 
 
-
-def get_selected_anchor( mesh ):
+def get_selected_anchor_index():
     # Check if the active object is a mesh in EDIT mode
     if bpy.context.mode != 'EDIT_MESH':
         return -1
@@ -312,6 +311,76 @@ def get_selected_anchor( mesh ):
 
 
 
+def get_selected_anchor():
+    # Check if the active object is a mesh in EDIT mode
+    if bpy.context.mode != 'EDIT_MESH':
+        return None
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return None
+
+    is_editable = get_mesh_editable( mesh )
+    if not is_editable:
+        return None
+
+    # Access the bmesh for the edit mesh
+    bm = bmesh.from_edit_mesh(mesh.data)
+    bm.verts.ensure_lookup_table()
+
+    # Record selected vertices
+    index = -1
+    for vert in bm.verts:
+        if vert.select:  # Check if the vertex is selected
+            index = vert.index
+            break
+
+    # Check if such anchor exists
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+    for idx, anchor in enumerate(anchors):
+        anchor_index = anchor.index
+        if index == anchor_index:
+            return anchor
+
+    return None
+
+
+
+def get_all_selected_anchors():
+    # Check if the active object is a mesh in EDIT mode
+    if bpy.context.mode != 'EDIT_MESH':
+        return []
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return []
+
+    is_editable = get_mesh_editable( mesh )
+    if not is_editable:
+        return []
+
+    # Access the bmesh for the edit mesh
+    bm = bmesh.from_edit_mesh(mesh.data)
+    bm.verts.ensure_lookup_table()
+
+    # Record selected vertices
+    indices = set()
+    for vert in bm.verts:
+        if vert.select:  # Check if the vertex is selected
+            index = vert.index
+            indices.add( index )
+
+    # Check if such anchor exists
+    mesh_prop = mesh.data.mesh_prop
+    anchors   = mesh_prop.anchors
+    selected_anchors = []
+    for idx, anchor in enumerate(anchors):
+        anchor_index = anchor.index
+        if anchor_index in indices:
+            selected_anchors.append( anchor )
+
+    return selected_anchors
 
 
 
@@ -433,4 +502,29 @@ def unselect_all_vertices(obj):
     
         # Update the mesh in the viewport
         bmesh.update_edit_mesh(obj.data, loop_triangles=False)
+
+
+
+def apply_radius_to_selected_pins():
+    import pdb
+    pdb.set_trace()
+    # Pick radius from the very first pin selected and apply to all other ones.
+    selected_anchor = get_selected_anchor()
+
+    selected_anchors = get_all_selected_anchors()
+    radius = selected_anchor.radius
+
+    for anchor in selected_anchors:
+        anchor.radius = radius
+
+def apply_metric_to_selected_pins():
+    # Pick radius from the very first pin selected and apply to all other ones.
+    selected_anchor = get_selected_anchor()
+
+    selected_anchors = get_all_selected_anchors()
+    radius = selected_anchor.metric
+
+    for anchor in selected_anchors:
+        anchor.metric = metric
+
 

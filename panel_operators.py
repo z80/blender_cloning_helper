@@ -168,6 +168,56 @@ class MESH_OT_add_anchors( bpy.types.Operator ):
 
 
 
+class MESH_OT_apply_radius_to_selected( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.apply_radius"
+    bl_label  = "Apply radius to all selected pins."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        apply_radius_to_selected_pins()
+        return {"FINISHED"}
+
+
+
+
+class MESH_OT_apply_metric_to_selected( bpy.types.Operator ):
+    """
+    Mesh is considered editable if vertex coordinates are stored.
+    """
+    
+    bl_idname = "mesh.apply_metric"
+    bl_label  = "Apply metric to all selected pins."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        apply_metric_to_selected_pins()
+        return {"FINISHED"}
+
+
+
+
 
 
 # Handler function to track changes
@@ -255,6 +305,8 @@ def register_operators():
     bpy.utils.register_class(MESH_OT_revert_transform)
     bpy.utils.register_class(MESH_OT_add_anchors)
     bpy.utils.register_class(MESH_OT_remove_anchors)
+    bpy.utils.register_class(MESH_OT_apply_radius_to_selected)
+    bpy.utils.register_class(MESH_OT_apply_metric_to_selected)
 
     # Register the depsgraph update handler
     bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
@@ -262,6 +314,8 @@ def register_operators():
 
 
 def unregister_operators():
+    bpy.utils.unregister_class(MESH_OT_apply_metric_to_selected)
+    bpy.utils.unregister_class(MESH_OT_apply_radius_to_selected)
     bpy.utils.unregister_class(MESH_OT_remove_anchors)
     bpy.utils.unregister_class(MESH_OT_add_anchors)
     bpy.utils.unregister_class(MESH_OT_apply_transform)

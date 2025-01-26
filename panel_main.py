@@ -61,12 +61,15 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
                 layout.prop(mesh_prop, 'step_3', expand=True)
                 
 
-            index = get_selected_anchor( mesh )
+            index = get_selected_anchor_index()
             if index >= 0:
                 anchor = mesh.data.mesh_prop.anchors[index]
                 layout.label( text=f"Pin #{index}" )
                 layout.prop( anchor, 'metric', expand=True )
                 layout.prop( anchor, 'radius', expand=True )
+            
+                layout.operator( "mesh.apply_radius",  text="Radius -> all selected" )
+                layout.operator( "mesh.apply_metric",  text="Metric -> all selected" )
 
             layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
