@@ -71,8 +71,6 @@ def align_stencil_to_viewport():
     screen_height = max_y - min_y
     
     # Set up stencil image
-    import pdb
-    pdb.set_trace()
     version = bpy.app.version
     if version[0] == 4:
         if version[1] < 2:
