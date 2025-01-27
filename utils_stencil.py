@@ -71,32 +71,76 @@ def align_stencil_to_viewport():
     screen_height = max_y - min_y
     
     # Set up stencil image
-    brush = bpy.context.tool_settings.image_paint.brush
-    brush.texture = bpy.data.textures.new(name="StencilTexture", type='IMAGE')
-    brush.texture.image = reference_image
-    brush.texture_slot.map_mode = 'STENCIL'
-   
-    # Adjust stencil image scale and offset to match screen dimensions while maintaining aspect ratio
-    screen_aspect_ratio = screen_width / screen_height
-    if reference_aspect_ratio > screen_aspect_ratio:
-        scale_x = screen_width / reference_image.size[0]
-        scale_y = scale_x / reference_aspect_ratio
-    else:
-        scale_y = screen_height / reference_image.size[1]
-        scale_x = scale_y * reference_aspect_ratio
+    import pdb
+    pdb.set_trace()
+    version = bpy.app.version
+    if version[0] == 4:
+        if version[1] < 2:
+            brush = bpy.context.tool_settings.image_paint.brush
+            brush.texture = bpy.data.textures.new(name="StencilTexture", type='IMAGE')
+            brush.texture.image = reference_image
+            brush.texture_slot.map_mode = 'STENCIL'
 
-    brush.texture_slot.scale = (1.0, 1.0, 1.0)
-    brush.texture_slot.offset = (0.0, 0.0, 0.0)
-    bpy.ops.brush.stencil_fit_image_aspect()
-    
-    scale_adj = bpy.context.scene.photogrammetry_properties.stencil_scale_adj
-    scale_adj = (100.0 + scale_adj) / 100.0
-    # Adjust stencil settings directly
-    #bpy.context.tool_settings.image_paint.brush.stencil_image = reference_image
-    bpy.context.tool_settings.image_paint.brush.stencil_dimension = (scale_adj*screen_width/2.0, scale_adj*screen_height/2.0)
-    bpy.context.tool_settings.image_paint.brush.stencil_pos = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0)    
-    # Ensure the offset sequence is correct # Prevent tiling
-    brush.texture.extension = 'CLIP'
+            # Adjust stencil image scale and offset to match screen dimensions while maintaining aspect ratio
+            screen_aspect_ratio = screen_width / screen_height
+            if reference_aspect_ratio > screen_aspect_ratio:
+                scale_x = screen_width / reference_image.size[0]
+                scale_y = scale_x / reference_aspect_ratio
+            else:
+                scale_y = screen_height / reference_image.size[1]
+                scale_x = scale_y * reference_aspect_ratio
+
+            brush.texture_slot.scale = (1.0, 1.0, 1.0)
+            brush.texture_slot.offset = (0.0, 0.0, 0.0)
+            bpy.ops.brush.stencil_fit_image_aspect()
+            
+            scale_adj = bpy.context.scene.photogrammetry_properties.stencil_scale_adj
+            scale_adj = (100.0 + scale_adj) / 100.0
+            # Adjust stencil settings directly
+            dims = (scale_adj*screen_width/2.0, scale_adj*screen_height/2.0)
+            pos  = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0)
+            bpy.context.tool_settings.image_paint.brush.stencil_dimension = dims
+            bpy.context.tool_settings.image_paint.brush.stencil_pos = pos
+            # Ensure the offset sequence is correct # Prevent tiling
+            brush.texture.extension = 'CLIP'
+        else:
+            # Create a new brush asset
+            brush_asset = bpy.data.brushes.new(name="StencilBrush", mode='TEXTURE_PAINT')
+            # Create a new texture
+            texture = bpy.data.textures.new(name="StencilTexture", type='IMAGE')
+            texture.image = reference_image
+            # Assign the texture to the brush asset
+            brush_asset.texture = texture
+            # Add the brush asset to the asset library
+            # (This step might not be necessary if you're directly using the brush)
+            # bpy.ops.paint.brush_add_to_library(asset=brush_asset)
+            # Set the new brush as the active brush
+            bpy.context.tool_settings.image_paint.brush = brush_asset
+            brush_asset.texture_slot.map_mode = 'STENCIL'
+            brush = bpy.context.tool_settings.image_paint.brush
+
+            # Adjust stencil image scale and offset to match screen dimensions while maintaining aspect ratio
+            screen_aspect_ratio = screen_width / screen_height
+            if reference_aspect_ratio > screen_aspect_ratio:
+                scale_x = screen_width / reference_image.size[0]
+                scale_y = scale_x / reference_aspect_ratio
+            else:
+                scale_y = screen_height / reference_image.size[1]
+                scale_x = scale_y * reference_aspect_ratio
+
+            brush.texture_slot.scale = (1.0, 1.0, 1.0)
+            brush.texture_slot.offset = (0.0, 0.0, 0.0)
+            bpy.ops.brush.stencil_fit_image_aspect()
+            
+            scale_adj = bpy.context.scene.photogrammetry_properties.stencil_scale_adj
+            scale_adj = (100.0 + scale_adj) / 100.0
+            # Adjust stencil settings directly
+            dims = (scale_adj*screen_width/2.0, scale_adj*screen_height/2.0)
+            pos  = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0)
+            bpy.context.tool_settings.image_paint.brush.stencil_dimension = dims
+            bpy.context.tool_settings.image_paint.brush.stencil_pos = pos
+            # Ensure the offset sequence is correct # Prevent tiling
+            brush.texture.extension = 'CLIP'
 
 #align_stencil_to_viewport()
 #print("Stencil image aligned to match reference image dimensions in 3D viewport")
