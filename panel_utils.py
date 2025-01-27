@@ -105,8 +105,9 @@ def mesh_to_2d_arrays( mesh ):
             virtual_faces.append(verts)
         elif len(verts) > 3:
             # Triangulate the polygon
-            for i in range(1, len(verts) - 1):
-                virtual_faces.append((verts[0], verts[i], verts[i + 1]))
+            qty = len(verts)
+            for i in range(qty):
+                virtual_faces.append((verts[i], verts[(i+1)%qty], verts[(i+2)%qty]))
 
     virtual_faces = np.array(virtual_faces)
 
