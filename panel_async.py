@@ -12,9 +12,9 @@ def recalculate_mesh_shape( mesh ):
     #pdb.set_trace()
 
     # The data needed for the update
-    V, F, fixed_data, apply_gp, apply_elastic, apply_proportional_falloff, iterations, default_radius, max_influence, min_influence = get_mesh_update_data( mesh )
+    V, F, update_data, use_algorithm, gp_radius, gp_regularization, id_power, id_epsilon = get_mesh_update_data( mesh )
     
-    V_new = smooth_transform( V, F, fixed_data, apply_gp, apply_elastic, apply_proportional_falloff, iterations, default_radius, max_influence, min_influence )
+    V_new = smooth_transform( V, F, update_data, use_algorithm, gp_radius, gp_regularization, id_power, id_epsilon )
 
     apply_to_mesh( mesh, V_new )
 

@@ -9,7 +9,7 @@ from utils_geometry import *
 
 
 
-def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radius, normalized=True):
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radius, regularization=0.0001):
     """
     Apply rigid body transformation and interpolate displacements using Gaussian Process.
 
@@ -40,11 +40,15 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
     # Compute kernel matrices
     # K has to be symmetric. Otherwise there is no exact match in the points where the function is defined.
     K = rbf_kernel(distances[:, fixed_vertices], influence_radius)  # Kernel for fixed points
+    # Add a regularization term for numerical stability
+    K_regularization = regularization * np.eye(K.shape[0])
+    K += K_regularization
+
     K_star = rbf_kernel(distances, influence_radius)                # Kernel between all points and fixed points
 
-    if normalized:
-        K_star_lengths = np.linalg.norm(K_star, axis=0)
-        K_star = K_star / K_star_lengths[None, :]
+    #if normalized:
+    #    K_star_lengths = np.linalg.norm(K_star, axis=0)
+    #    K_star = K_star / K_star_lengths[None, :]
 
     # Solve for weights (zero-noise GP assumes K is invertible)
     weights = np.linalg.solve(K, modified_displacements)
@@ -54,6 +58,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
 
     # Step 8: Update all points with interpolated displacements
     V_updated = V_transformed + interpolated_displacements
+    V_updated[fixed_vertices] = fixed_positions
 
     return V_updated, R, T
 
@@ -61,7 +66,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
 
 
 
-def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, power=2, epsilon=1.0e-3 ):
+def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, influence_radii, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
     best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
@@ -90,7 +95,7 @@ def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, p
         # Check for exact match
         if np.all( mask[:, vert_idx] ):
             # Apply inverse distance weighting
-            weights = 1.0 / (distances[:, vert_idx] + epsilon)**power
+            weights = 1.0 / (distances[:, vert_idx]/influence_radii + epsilon)**power
             sum_weights = np.sum(weights)
             displacement_per_target = (weights[:, None] * displacements)
             displacement = np.sum( displacement_per_target, axis=0 ) / sum_weights

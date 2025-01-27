@@ -10,19 +10,19 @@ from utils_falloff    import *
 
 VERY_FAR_DISTANCE = 1.0e10
 
-def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, apply_proportional_falloff=False, iterations=3, default_radius=1.0, max_influence=10.0, min_influence=1.0, normalized_gp=False ):
+def smooth_transform( V, F, fixed_data, use_algorithm, gp_radius, gp_regularization, id_power, id_epsilon ):
 
     qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
     fixed_vertices   = []
     distance_metrics = []
-    influence_radii  = np.ones( (qty,) ) * default_radius
+    influence_radii  = np.ones( (qty,) ) * gp_radius
 
     for idx, vert in enumerate(fixed_data):
         index  = vert.get( "index", 0 )
         pos    = vert.get( "pos", np.zeros( (3,) ) )
         metric = vert.get( "metric", "geodesic" )
-        radius = vert.get( "radius", default_radius )
+        radius = vert.get( "radius", gp_radius )
 
         fixed_vertices.append( index )
         fixed_positions[idx] = pos
@@ -43,15 +43,11 @@ def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, appl
     reachable_distances[negative_inds] = VERY_FAR_DISTANCE
 
     # Apply the inverse distance transform first.
-    if (not apply_gp) or apply_elastic:
-        modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances )
-        V_idt = modified_reachable_V
-        V_gp  = None
-    else:
-        mean_radius = np.mean( influence_radii )
-        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
-        V_idt = None
-        V_gp  = modified_reachable_V
+    if use_algorithm == 'inverse_dist':
+        modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, influence_radii, id_power, id_epsilon )
+    elif use_algorithm == 'gaussian_proc':
+        #modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
+        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, gp_radius, gp_regularization )
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.
@@ -59,7 +55,7 @@ def smooth_transform( V, F, fixed_data, apply_gp=False, apply_elastic=True, appl
 
     
     # If we should run the elastic transform, do that.
-    if apply_elastic:
+    if False:
         #import pdb
         #pdb.set_trace()
 

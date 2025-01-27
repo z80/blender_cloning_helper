@@ -292,18 +292,18 @@ def get_selected_anchor_index():
     bm.verts.ensure_lookup_table()
 
     # Record selected vertices
-    index = -1
+    indices = set()
     for vert in bm.verts:
         if vert.select:  # Check if the vertex is selected
             index = vert.index
-            break
+            indices.add( index )
 
     # Check if such anchor exists
     mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
     for idx, anchor in enumerate(anchors):
         anchor_index = anchor.index
-        if index == anchor_index:
+        if anchor_index in indices:
             return idx
 
     return -1
@@ -329,18 +329,18 @@ def get_selected_anchor():
     bm.verts.ensure_lookup_table()
 
     # Record selected vertices
-    index = -1
+    indices = set()
     for vert in bm.verts:
         if vert.select:  # Check if the vertex is selected
             index = vert.index
-            break
+            indices.add( index )
 
     # Check if such anchor exists
     mesh_prop = mesh.data.mesh_prop
     anchors   = mesh_prop.anchors
     for idx, anchor in enumerate(anchors):
         anchor_index = anchor.index
-        if index == anchor_index:
+        if anchor_index in indices:
             return anchor
 
     return None
@@ -410,24 +410,25 @@ def get_mesh_update_data( mesh ):
     qty = len(anchors)
     update_data = []
 
+    qty = 0
+    radius_accum = 0.0
     for anchor in anchors:
         index  = anchor.index
         pos    = anchor.pos
         metric = anchor.metric
         radius = anchor.radius
         data = { 'index': index, 'pos': pos, 'metric': metric, 'radius': radius }
+        radius_accum += radius
+        qty += 1
         update_data.append( data )
 
-    use_gp      = (mesh_prop.step_1 == 'gaussian_proc')
-    use_elastic = (mesh_prop.step_2 == 'elastic')
-    use_proportional_falloff = (mesh_prop.step_3 == 'proportional_falloff')
+    use_algorithm = mesh_prop.step_1
+    gp_radius         = radius_accum / qty
+    gp_regularization = mesh.data.mesh_prop.gp_regularization
+    id_power          = mesh.data.mesh_prop.id_power
+    id_epsilon        = mesh.data.mesh_prop.id_epsilon
 
-    iterations     = 3
-    default_radius = 1.0
-    max_influence  = 10.0
-    min_influence  = 1.0
-
-    return V, F, update_data, use_gp, use_elastic, use_proportional_falloff, iterations, default_radius, max_influence, min_influence
+    return V, F, update_data, use_algorithm, gp_radius, gp_regularization, id_power, id_epsilon
 
 
 
@@ -506,8 +507,8 @@ def unselect_all_vertices(obj):
 
 
 def apply_radius_to_selected_pins():
-    import pdb
-    pdb.set_trace()
+    #import pdb
+    #pdb.set_trace()
     # Pick radius from the very first pin selected and apply to all other ones.
     selected_anchor = get_selected_anchor()
 
@@ -522,7 +523,7 @@ def apply_metric_to_selected_pins():
     selected_anchor = get_selected_anchor()
 
     selected_anchors = get_all_selected_anchors()
-    radius = selected_anchor.metric
+    metric = selected_anchor.metric
 
     for anchor in selected_anchors:
         anchor.metric = metric

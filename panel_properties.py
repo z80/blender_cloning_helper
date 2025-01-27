@@ -70,6 +70,29 @@ class MeshProp(bpy.types.PropertyGroup):
         default='gaussian_proc'
     )
 
+    # Individual settings for the transformations.
+    # Gaussian process has this one setting.
+    gp_regularization: bpy.props.FloatProperty(
+        name="Gaussian Process Regularization",
+        description="Gaussian Process Regularization value",
+        default=1.0e-6
+    )
+
+    # Inverse distance has two.
+    id_epsilon: bpy.props.FloatProperty(
+        name="Inverse Distance Epsilon",
+        description="Inverse Distance Epsilon Value",
+        default=1.0e-6
+    )
+    
+    # Inverse distance power
+    id_power: bpy.props.IntProperty( 
+        name='Inverse Distance Power', 
+        description='Inverse Distance Power value', 
+        default=2, 
+        min=1
+    )
+
     step_2: bpy.props.EnumProperty(
         name="Second step", 
         description="Second processing step", 

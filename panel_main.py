@@ -50,15 +50,22 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
 
             mesh_prop = mesh.data.mesh_prop
 
-            layout.label( text="Step 1" )
-            layout.prop(mesh_prop, 'step_1', expand=True)
+            #layout.label( text="Step 1" )
+            layout.label( text="Algorithm" )
+            layout.prop(mesh_prop, 'step_1', text='Algorithm')
 
-            layout.label( text="Step 2" )
-            layout.prop(mesh_prop, 'step_2', expand=True)
+            if mesh_prop.step_1 == 'inverse_dist':
+                layout.prop( mesh.data.mesh_prop, 'id_power' )
+                layout.prop( mesh.data.mesh_prop, 'id_epsilon' )
+            elif mesh_prop.step_1 == 'gaussian_proc':
+                layout.prop( mesh.data.mesh_prop, 'gp_regularization' )
 
-            if mesh_prop.step_2 != 'none':
-                layout.label( text="Step 3" )
-                layout.prop(mesh_prop, 'step_3', expand=True)
+            #layout.label( text="Step 2" )
+            #layout.prop(mesh_prop, 'step_2', expand=True)
+
+            #if mesh_prop.step_2 != 'none':
+            #    layout.label( text="Step 3" )
+            #    layout.prop(mesh_prop, 'step_3', expand=True)
                 
 
             index = get_selected_anchor_index()

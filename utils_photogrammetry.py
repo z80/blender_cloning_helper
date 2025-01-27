@@ -215,6 +215,8 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
 
 
 
+
+
     image_pose_properties: bpy.props.CollectionProperty(type=ImagePoseProperties)
 
     points3d: bpy.props.CollectionProperty(type=Point3dProperties)
