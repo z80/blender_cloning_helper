@@ -10,7 +10,7 @@ from utils_falloff    import *
 
 VERY_FAR_DISTANCE = 1.0e10
 
-def smooth_transform( V, F, fixed_data, use_algorithm, gp_radius, gp_regularization, id_power, id_epsilon ):
+def smooth_transform( V, F, fixed_data, use_algorithm, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon ):
 
     qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
@@ -44,10 +44,10 @@ def smooth_transform( V, F, fixed_data, use_algorithm, gp_radius, gp_regularizat
 
     # Apply the inverse distance transform first.
     if use_algorithm == 'inverse_dist':
-        modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, influence_radii, id_power, id_epsilon )
+        modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, influence_radii, id_power, id_epsilon )
     elif use_algorithm == 'gaussian_proc':
         #modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
-        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, gp_radius, gp_regularization )
+        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, gp_radius, gp_regularization )
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.

@@ -5,11 +5,11 @@ from scipy.sparse.csgraph import dijkstra
 
 
 from utils_geometry import *
+from utils_falloff import *
 
 
 
-
-def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, influence_radius, regularization=0.0001):
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radius, regularization=0.0001):
     """
     Apply rigid body transformation and interpolate displacements using Gaussian Process.
 
@@ -45,6 +45,8 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
     K += K_regularization
 
     K_star = rbf_kernel(distances, influence_radius)                # Kernel between all points and fixed points
+    decay_weights = rbf_kernel( distances, decay_radius )
+    K_star *= decay_weights
 
     #if normalized:
     #    K_star_lengths = np.linalg.norm(K_star, axis=0)
@@ -66,7 +68,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, in
 
 
 
-def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, influence_radii, power=2, epsilon=1.0e-3 ):
+def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radii, power=2, epsilon=1.0e-3 ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
     best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
@@ -98,6 +100,8 @@ def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, i
             weights = 1.0 / (distances[:, vert_idx]/influence_radii + epsilon)**power
             sum_weights = np.sum(weights)
             displacement_per_target = (weights[:, None] * displacements)
+            decay_weights = falloff_function( distances[:, vert_idx], decay_radius )
+            displacement_per_target *= decay_weights[:, None]
             displacement = np.sum( displacement_per_target, axis=0 ) / sum_weights
 
         else:

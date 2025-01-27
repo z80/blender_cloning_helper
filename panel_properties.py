@@ -33,7 +33,7 @@ class AnchorPointProp(bpy.types.PropertyGroup):
     radius: bpy.props.FloatProperty( 
         name='Radius', 
         description='Influence radius of this anchor point', 
-        default=1.0, 
+        default=0.1, 
         min=0.0001
     )
 
@@ -69,6 +69,14 @@ class MeshProp(bpy.types.PropertyGroup):
         ], 
         default='inverse_dist'
     )
+
+    # One common settings is decay radius
+    decay_radius: bpy.props.FloatProperty(
+        name="Decay Radius",
+        description="Decay Radius Value. It defines how the whole transformation influence decays over distance",
+        default=0.2
+    )
+
 
     # Individual settings for the transformations.
     # Gaussian process has this one setting.
