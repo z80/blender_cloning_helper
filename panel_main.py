@@ -26,6 +26,7 @@ if not need_packages:
 
     from utils_photogrammetry import *
     from panel_operators_photogrammetry import *
+    from materials_operators import *
 
 
 class MESH_PT_MeshEditPanel(bpy.types.Panel):
@@ -177,6 +178,7 @@ def register():
         register_photogrammetry()
         bpy.utils.register_class(MESH_PT_MeshEditPanel)
         bpy.utils.register_class(MESH_PT_ToolPathsPanel)
+        materials_register()
 
         register_draw()
 
@@ -189,6 +191,7 @@ def unregister():
     else:
         bpy.utils.unregister_class(MESH_PT_MeshEditPanel)
         bpy.utils.unregister_class(MESH_PT_ToolPathsPanel)
+        materials_unregister()
         unregister_draw()
         unregister_operators()
         unregister_properties()
