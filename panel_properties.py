@@ -127,6 +127,13 @@ class MeshProp(bpy.types.PropertyGroup):
         default='none'
     )
 
+
+    draw_pins: bpy.props.BoolProperty( 
+        name="Draw Pins", 
+        description="Should draw red dots for all the pins", 
+        default=True
+    )
+
     update_queue: deque = deque()
     is_updating: bpy.props.BoolProperty(default=False)
 

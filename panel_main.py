@@ -88,6 +88,9 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             layout.operator( "mesh.add_anchors",      text="Make selected pins" )
             layout.operator( "mesh.remove_anchors",   text="Clear selected pins" )
 
+            layout.prop( mesh.data.mesh_prop, 'draw_pins', text="Draw Pins" )
+
+
         else:
             layout.operator("mesh.set_mesh_editable", text="Make editable")
 

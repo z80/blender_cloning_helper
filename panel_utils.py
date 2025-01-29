@@ -40,6 +40,11 @@ def get_anchor_coordinates():
         return []
 
     mesh_prop = mesh.data.mesh_prop
+
+    draw_pins = mesh_prop.draw_pins
+    if not draw_pins:
+        return []
+
     anchors   = mesh_prop.anchors
 
     world_matrix = np.array( mesh.matrix_world )
