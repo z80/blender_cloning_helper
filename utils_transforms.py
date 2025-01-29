@@ -9,7 +9,7 @@ from utils_falloff import *
 
 
 
-def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radius, regularization=0.0001):
+def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radius, regularization=0.0001, apply_rigid_rotation=False):
     """
     Apply rigid body transformation and interpolate displacements using Gaussian Process.
 
@@ -22,15 +22,21 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
     Returns:
     numpy.ndarray: Updated points after applying the rigid body transform and interpolated displacements.
     """
+    
+    if apply_rigid_rotation:
+        #Calculate rigid transform first.
+        R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
 
-    #Calculate rigid transform first.
-    R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
+        # Step 5: Apply the rigid body transform to all points
+        V_transformed = np.dot(R, V.T).T + T
 
-    # Step 5: Apply the rigid body transform to all points
-    V_transformed = np.dot(R, V.T).T + T
+        # Step 6: Compute the displacements of modified points after rigid body transform
+        modified_displacements = fixed_positions - V_transformed[fixed_vertices]
 
-    # Step 6: Compute the displacements of modified points after rigid body transform
-    modified_displacements = fixed_positions - V_transformed[fixed_vertices]
+    else:
+        modified_displacements = fixed_positions
+        R = None
+        T = None
 
     # Step 7: Interpolate displacements using Gaussian Process
     # Use the RBF kernel (Squared Exponential)
@@ -59,7 +65,12 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
     interpolated_displacements = np.dot(K_star.T, weights)
 
     # Step 8: Update all points with interpolated displacements
-    V_updated = V_transformed + interpolated_displacements
+    if apply_rigid_rotation:
+        V_updated = V_transformed + interpolated_displacements
+
+    else:
+        V_updated = V_transformed
+
     V_updated[fixed_vertices] = fixed_positions
 
     return V_updated, R, T
@@ -68,7 +79,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
 
 
 
-def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radii, power=2, epsilon=1.0e-3 ):
+def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, decay_radius, influence_radii, power=2, epsilon=1.0e-3, apply_rigid_rotation=False ):
     """
     I believe, this one implements something similar to Radial Basis Functions (RBF) based transform 
     best I understand the concept of RBF except I use geodesic distance in place of euclidean distance.
@@ -77,19 +88,27 @@ def inverse_distance_transform( V, fixed_vertices, fixed_positions, distances, d
     #import pdb
     #pdb.set_trace()
 
-    R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
     # Indices where the distance is very small.
     below_threshold_indices = np.where(distances < epsilon)
     # Create a mask for all points
     mask = np.full(distances.shape, True)
     mask[below_threshold_indices] = False
- 
-    # Applying rigid transform, i.e. rotaton and translation.
-    new_positions = np.dot( R, V.T ).T + T
+    
+    if apply_rigid_rotation:
+        # Applying rigid transform, i.e. rotaton and translation.
+        R, T = get_rigid_transform( V, fixed_vertices, fixed_positions )
+        new_positions = np.dot( R, V.T ).T + T
 
-    # Compute displacements for fixed positions.
-    start_positions = new_positions[fixed_vertices]
-    displacements   = fixed_positions - start_positions
+        # Compute displacements for fixed positions.
+        start_positions = new_positions[fixed_vertices]
+        displacements   = fixed_positions - start_positions
+
+    else:
+        new_positions   = V.copy()
+        start_positions = V[fixed_vertices]
+        displacements   = fixed_positions - start_positions
+        R = None
+        T = None
 
     num_points = V.shape[0]
 

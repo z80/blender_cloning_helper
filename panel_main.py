@@ -55,6 +55,8 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             layout.label( text="Algorithm" )
             layout.prop(mesh_prop, 'step_1', text='Algorithm')
 
+            layout.prop( mesh.data.mesh_prop, 'apply_rigid_transform', text="Rigid Transform" )
+
             layout.prop( mesh.data.mesh_prop, 'decay_radius', text="Effective dist" )
 
             if mesh_prop.step_1 == 'inverse_dist':

@@ -70,6 +70,12 @@ class MeshProp(bpy.types.PropertyGroup):
         default='inverse_dist'
     )
 
+    apply_rigid_transform: bpy.props.BoolProperty( 
+        name="Rigid Transform", 
+        description="Should rigid transform be applied to all vertices prior to elastic transform", 
+        default=False
+    )
+
     # One common settings is decay radius
     decay_radius: bpy.props.FloatProperty(
         name="Decay Radius",
