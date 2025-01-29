@@ -71,16 +71,19 @@ def _get_or_create_pbr_material( material_name, texture_dir, unit_square, resolu
     
     tex_image_base = nodes.new('ShaderNodeTexImage')
     tex_image_base.image = bpy.data.images.load(base_color_path)
+    tex_image_base.image.colorspace_settings.name = 'sRGB'
     tex_image_base.location = (-400, 200)
     links.new(tex_image_base.outputs['Color'], principled_bsdf.inputs['Base Color'])
     
     tex_image_roughness = nodes.new('ShaderNodeTexImage')
     tex_image_roughness.image = bpy.data.images.load(roughness_path)
+    tex_image_roughness.image.colorspace_settings.name = 'Non-Color'
     tex_image_roughness.location = (-400, 0)
     links.new(tex_image_roughness.outputs['Color'], principled_bsdf.inputs['Roughness'])
     
     tex_image_normal = nodes.new('ShaderNodeTexImage')
     tex_image_normal.image = bpy.data.images.load(normal_path)
+    tex_image_normal.image.colorspace_settings.name = 'Non-Color'
     tex_image_normal.location = (-400, -200)
     normal_map = nodes.new('ShaderNodeNormalMap')
     normal_map.location = (-200, -200)
@@ -98,11 +101,13 @@ def _get_or_create_pbr_material( material_name, texture_dir, unit_square, resolu
 
     tex_image_metallic = nodes.new('ShaderNodeTexImage')
     tex_image_metallic.image = bpy.data.images.load(metallic_path)
+    tex_image_metallic.image.colorspace_settings.name = 'Non-Color'
     tex_image_metallic.location = (-400, 400)
     links.new(tex_image_metallic.outputs['Color'], principled_bsdf.inputs['Metallic'])
     
     tex_image_alpha = nodes.new('ShaderNodeTexImage')
     tex_image_alpha.image = bpy.data.images.load(alpha_path)
+    tex_image_alpha.image.colorspace_settings.name = 'Non-Color'
     tex_image_alpha.location = (-400, -600)
     links.new(tex_image_alpha.outputs['Color'], principled_bsdf.inputs['Alpha'])
         
