@@ -34,6 +34,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
         modified_displacements = fixed_positions - V_transformed[fixed_vertices]
 
     else:
+        V_transformed = V.copy()
         modified_displacements = fixed_positions
         R = None
         T = None
@@ -65,11 +66,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
     interpolated_displacements = np.dot(K_star.T, weights)
 
     # Step 8: Update all points with interpolated displacements
-    if apply_rigid_rotation:
-        V_updated = V_transformed + interpolated_displacements
-
-    else:
-        V_updated = V_transformed
+    V_updated = V_transformed + interpolated_displacements
 
     V_updated[fixed_vertices] = fixed_positions
 
