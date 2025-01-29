@@ -4,13 +4,14 @@ import bmesh
 import numpy as np
 import os
 
-def _create_pbr_texture(texture_dir, texture_name, resolution):
+def _create_pbr_texture(texture_dir, texture_name, resolution, default_value=1.0):
     # Create a new image in Blender
     img = bpy.data.images.new(texture_name, width=resolution, height=resolution, alpha=False)
     
     # Initialize the image to black
     pixels = np.zeros((resolution, resolution, 4), dtype=np.float32)
-    pixels[:, :, 3] = 1  # Set alpha to 1.0
+    pixels[:, :, 3]  = 1.0  # Set alpha to 1.0
+    pixels[:, :, :3] = default_value
     img.pixels = pixels.flatten()
 
     # Save the image
@@ -60,12 +61,12 @@ def _get_or_create_pbr_material( material_name, texture_dir, unit_square, resolu
     links.new(principled_bsdf.outputs['BSDF'], material_output.inputs['Surface'])
     
     # Create textures and assign to material
-    base_color_path = _create_pbr_texture( texture_dir, f"base_color.{tex_id}", resolution )
-    roughness_path  = _create_pbr_texture( texture_dir, f"roughness.{tex_id}",  resolution )
-    normal_path     = _create_pbr_texture( texture_dir, f"normal.{tex_id}",     resolution )
-    emission_path   = _create_pbr_texture( texture_dir, f"emission.{tex_id}",   resolution )
-    metallic_path   = _create_pbr_texture(texture_dir, f"metallic.{tex_id}", resolution)
-    alpha_path      = _create_pbr_texture(texture_dir, f"alpha.{tex_id}", resolution)
+    base_color_path = _create_pbr_texture( texture_dir, f"base_color.{tex_id}", resolution, 1.0 )
+    roughness_path  = _create_pbr_texture( texture_dir, f"roughness.{tex_id}",  resolution, 0.7 )
+    normal_path     = _create_pbr_texture( texture_dir, f"normal.{tex_id}",     resolution, 0.5 )
+    emission_path   = _create_pbr_texture( texture_dir, f"emission.{tex_id}",   resolution, 0.0 )
+    metallic_path   = _create_pbr_texture( texture_dir, f"metallic.{tex_id}",   resolution, 0.1 )
+    alpha_path      = _create_pbr_texture( texture_dir, f"alpha.{tex_id}",      resolution, 1.0 )
 
     
     tex_image_base = nodes.new('ShaderNodeTexImage')
