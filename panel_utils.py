@@ -429,6 +429,9 @@ def get_mesh_update_data( mesh ):
         update_data.append( data )
 
     use_algorithm = mesh_prop.step_1
+    step_2            = mesh_prop.step_2 != 'none'
+    normal_importance = mesh_prop.normal_importance
+    step_3            = mesh_prop.step_3 != 'none'
     rigid_transform   = mesh.data.mesh_prop.apply_rigid_transform
     decay_radius      = mesh.data.mesh_prop.decay_radius
     gp_radius         = radius_accum / qty
@@ -436,7 +439,7 @@ def get_mesh_update_data( mesh ):
     id_power          = mesh.data.mesh_prop.id_power
     id_epsilon        = mesh.data.mesh_prop.id_epsilon
 
-    return V, F, update_data, use_algorithm, rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon
+    return V, F, update_data, use_algorithm, step_2, normal_importance, step_3, rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon
 
 
 

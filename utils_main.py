@@ -10,7 +10,7 @@ from utils_falloff    import *
 
 VERY_FAR_DISTANCE = 1.0e10
 
-def smooth_transform( V, F, fixed_data, use_algorithm, apply_rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon ):
+def smooth_transform( V, F, fixed_data, use_algorithm, step_2, normal_importance, step_3, apply_rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon ):
 
     qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
@@ -48,6 +48,9 @@ def smooth_transform( V, F, fixed_data, use_algorithm, apply_rigid_transform, de
     elif use_algorithm == 'gaussian_proc':
         #modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
         modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, gp_radius, gp_regularization, apply_rigid_transform )
+    
+    # This is an initial approximaion for elastic transform.
+    V_idt = modified_reachable_V.copy()
 
     # Apply rigid transform to unreachable vertices.
     # That's the best we can do for them.
@@ -55,19 +58,17 @@ def smooth_transform( V, F, fixed_data, use_algorithm, apply_rigid_transform, de
 
     
     # If we should run the elastic transform, do that.
-    if False:
+    if step_2 and (V_idt is not None):
         #import pdb
         #pdb.set_trace()
 
         # V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None
-        V_arap = arap( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, iterations, max_influence, min_influence, influence_radii, falloff_function, modified_reachable_V )
+        iterations = 1
+        V_arap = elastic( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, iterations, normal_importance, 1.0, influence_radii, falloff_function, V_idt )
         modified_reachable_V = V_arap
 
-        if apply_proportional_falloff:
-            if V_gp is None:
-                mean_radius = np.mean( influence_radii )
-                V_gp, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
-                modified_reachable_V = apply_proportional_displacements( V_gp, V_arap, reachable_distances, influence_radii, falloff_function )
+        if step_3:
+            modified_reachable_V = apply_proportional_displacements( V_idt, V_arap, reachable_distances, influence_radii, falloff_function )
 
     # Recombine transforms back together.
     V_new = V.copy()
@@ -85,21 +86,6 @@ def smooth_transform( V, F, fixed_data, use_algorithm, apply_rigid_transform, de
 
 
 
-
-def arap_with_varible_normal_importance(V, F, fixed_vertices, fixed_positions, iterations=3, influence_radii=None):
-
-    if influence_radii is None:
-        influence_radii = 0.25 * np.ones(len(fixed_vertices))  # Default radius if none provided
-    
-    # Inverse distance transform is the initial approximation for the ARAP.
-    V_idt, distances = inverse_distance_transform( V, F, fixed_vertices, fixed_positions )
-    
-    # This ARAP is with importance falloff.
-    max_importance = 10.0
-    min_importance = 1.0
-    V_arap = arap(V, F, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func=falloff_function, V_initial=V_idt)
-
-    return V_arap
 
 
 

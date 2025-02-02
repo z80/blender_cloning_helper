@@ -137,7 +137,7 @@ def rigid_transform( V, R, T ):
 
 
 
-def arap(V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None):
+def elastic(V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None):
     """
     Executes the As-Rigid-As-Possible (ARAP) optimization.
     

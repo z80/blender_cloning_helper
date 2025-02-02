@@ -117,6 +117,13 @@ class MeshProp(bpy.types.PropertyGroup):
         default='none'
     )
 
+    normal_importance: bpy.props.FloatProperty(
+        name="Normal Importance", 
+        description="How much normal direction is moreimportant than tangential direction", 
+        default = 1.0, 
+        min = 0.01
+    )
+
     step_3: bpy.props.EnumProperty(
         name="Third step", 
         description="Third processing step", 
