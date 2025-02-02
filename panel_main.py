@@ -66,13 +66,13 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
                 layout.prop( mesh.data.mesh_prop, 'gp_regularization' )
 
             layout.label( text="Step 2" )
-            layout.prop(mesh_prop, 'step_2', expand=True)
+            layout.prop(mesh_prop, 'step_2')
             if ( mesh_prop.step_2 != 'none' ):
                 layout.prop( mesh.data.mesh_prop, 'normal_importance' )
 
             if mesh_prop.step_2 != 'none':
                 layout.label( text="Step 3" )
-                layout.prop(mesh_prop, 'step_3', expand=True)
+                layout.prop(mesh_prop, 'step_3')
                 
 
             index = get_selected_anchor_index()
