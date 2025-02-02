@@ -51,46 +51,58 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
 
             mesh_prop = mesh.data.mesh_prop
 
+            box = layout.box()
             #layout.label( text="Step 1" )
-            layout.label( text="Algorithm" )
-            layout.prop(mesh_prop, 'step_1', text='Algorithm')
+            box.label( text="Algorithm" )
+            box.prop(mesh_prop, 'step_1', text='Algorithm')
 
-            layout.prop( mesh.data.mesh_prop, 'apply_rigid_transform', text="Rigid Transform" )
+            box.prop( mesh.data.mesh_prop, 'apply_rigid_transform', text="Rigid Transform" )
 
-            layout.prop( mesh.data.mesh_prop, 'decay_radius', text="Effective dist" )
+            box.prop( mesh.data.mesh_prop, 'decay_radius', text="Effective dist" )
 
             if mesh_prop.step_1 == 'inverse_dist':
-                layout.prop( mesh.data.mesh_prop, 'id_power' )
-                layout.prop( mesh.data.mesh_prop, 'id_epsilon' )
+                box.prop( mesh.data.mesh_prop, 'id_power' )
+                box.prop( mesh.data.mesh_prop, 'id_epsilon' )
             elif mesh_prop.step_1 == 'gaussian_proc':
-                layout.prop( mesh.data.mesh_prop, 'gp_regularization' )
+                box.prop( mesh.data.mesh_prop, 'gp_regularization' )
 
-            layout.label( text="Step 2" )
-            layout.prop(mesh_prop, 'step_2')
+            box = layout.box()
+            box.label( text="Step 2" )
+            box.prop(mesh_prop, 'step_2')
             if ( mesh_prop.step_2 != 'none' ):
-                layout.prop( mesh.data.mesh_prop, 'normal_importance' )
+                box.prop( mesh.data.mesh_prop, 'normal_importance' )
 
             if mesh_prop.step_2 != 'none':
-                layout.label( text="Step 3" )
-                layout.prop(mesh_prop, 'step_3')
-                
+                box = layout.box()
+                box.label( text="Step 3" )
+                box.prop(mesh_prop, 'step_3')
+            
+            layout.separator()
 
             index = get_selected_anchor_index()
             if index >= 0:
+                box = layout.box()
                 anchor = mesh.data.mesh_prop.anchors[index]
-                layout.label( text=f"Pin #{index}" )
-                layout.prop( anchor, 'metric', expand=True )
-                layout.prop( anchor, 'radius', expand=True )
+                box.label( text=f"Pin #{index}" )
+                box.prop( anchor, 'metric', expand=True )
+                box.prop( anchor, 'radius', expand=True )
             
-                layout.operator( "mesh.apply_radius",  text="Radius -> all selected" )
-                layout.operator( "mesh.apply_metric",  text="Metric -> all selected" )
+                box.operator( "mesh.apply_radius",  text="Radius -> all selected" )
+                box.operator( "mesh.apply_metric",  text="Metric -> all selected" )
 
-            layout.operator( "mesh.apply_transform",  text="Apply transform" )
+                layout.separator()
+            
+            row = layout.row()
+            row.scale_y = 2.0
+            layout.prop( mesh.data.mesh_prop, 'draw_pins', text="Draw Pins" )
+            row.operator( "mesh.apply_transform",  text="Apply transform" )
+            layout.separator()
+
+            #layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
             layout.operator( "mesh.add_anchors",      text="Make selected pins" )
             layout.operator( "mesh.remove_anchors",   text="Clear selected pins" )
 
-            layout.prop( mesh.data.mesh_prop, 'draw_pins', text="Draw Pins" )
 
 
         else:
@@ -111,38 +123,52 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         layout = self.layout
         tool_paths = context.scene.tool_paths
 
-        layout.label(text="FFMPEG path")
-        layout.prop(tool_paths, "ffmpeg_path")
+        box = layout.box()
+        box.label(text="FFMPEG path")
+        box.prop(tool_paths, "ffmpeg_path")
 
-        layout.prop(tool_paths, "ffmpeg_frames")
-        layout.prop(tool_paths, "ffmpeg_seconds")
-        layout.prop(tool_paths, "ffmpeg_start_time", text="Start time")
-        layout.prop(tool_paths, "ffmpeg_end_time", text="End time")
+        box.prop(tool_paths, "ffmpeg_frames")
+        box.prop(tool_paths, "ffmpeg_seconds")
+        box.prop(tool_paths, "ffmpeg_start_time", text="Start time")
+        box.prop(tool_paths, "ffmpeg_end_time", text="End time")
 
-        layout.operator( "wm.call_ffmpeg", text="Extract frames" )
+        box.operator( "wm.call_ffmpeg", text="Extract frames" )
+
+        layout.separator()
 
 
         props = context.scene.photogrammetry_properties
 
-        layout.prop(tool_paths, "colmap_path")
-
-        layout.operator( "wm.call_colmap", text="Extract camera poses" )
+        box = layout.box()
+        box.prop(tool_paths, "colmap_path")
+        box.operator( "wm.call_colmap", text="Extract camera poses" )
         
-        layout.prop( props, 'additional_displacement', expand=True )
-        layout.prop( props, 'additional_rotation', expand=True )
-        layout.prop( props, 'additional_scale', expand=True )
-        layout.operator( "wm.create_ref_images", text="Create Ref Images" )
-
-        layout.label(text="Ref images")
-        layout.prop( props, 'show_point_cloud', expand=True )
-        #layout.prop( props, 'index', expand=True )
-        layout.prop( context.scene.photogrammetry_properties, "camera_images_items", text="Ref. Image" )
-        layout.operator( "wm.place_camera", text="Place camera" )
+        layout.separator()
 
 
-        layout.label(text="Texture paint stencil")
-        layout.prop( props, 'stencil_scale_adj', expand=True )
-        layout.operator( "wm.align_stencil", text="Align stencil" )
+        box = layout.box()
+        box.prop( props, 'additional_displacement', expand=True )
+        box.prop( props, 'additional_rotation', expand=True )
+        box.prop( props, 'additional_scale', expand=True )
+        box.operator( "wm.create_ref_images", text="Create Ref Images" )
+
+        layout.separator()
+
+
+        box = layout.box()
+        box.label(text="Ref images")
+        box.prop( props, 'show_point_cloud', expand=True )
+        #box.prop( props, 'index', expand=True )
+        box.prop( context.scene.photogrammetry_properties, "camera_images_items", text="Ref. Image" )
+        box.operator( "wm.place_camera", text="Place camera" )
+
+        layout.separator()
+
+
+        box = layout.box()
+        box.label(text="Texture paint stencil")
+        box.prop( props, 'stencil_scale_adj', expand=True )
+        box.operator( "wm.align_stencil", text="Align stencil" )
 
 
 
