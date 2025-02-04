@@ -46,6 +46,9 @@ def get_anchor_coordinates():
         return []
 
     anchors   = mesh_prop.anchors
+    qty = len(anchors)
+    if qty < 1:
+        return []
 
     world_matrix = np.array( mesh.matrix_world )
     
