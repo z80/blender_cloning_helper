@@ -515,7 +515,7 @@ def _create_image_object(camera_props, offset_distance=1.0):
     image_name = os.path.basename(image_path)
     image_width = camera_props.width
     fx          = camera_props.fx
-    image = bpy.data.images.load(image_path)
+    #image = bpy.data.images.load(image_path)
 
     # Create a reference image object
     #bpy.ops.object.empty_add(type='IMAGE', radius=1)
