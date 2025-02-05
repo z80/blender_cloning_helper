@@ -133,7 +133,7 @@ def align_stencil_to_viewport():
             scale_adj = bpy.context.scene.photogrammetry_properties.stencil_scale_adj
             scale_adj = (100.0 + scale_adj) / 100.0
             # Adjust stencil settings directly
-            dims = (scale_adj*screen_width/2.0, scale_adj*screen_height/2.0)
+            dims = (scale_adj*screen_width/1.0, scale_adj*screen_height/1.0)
             pos  = ((min_x + max_x) / 2.0, (min_y + max_y) / 2.0)
             bpy.context.tool_settings.image_paint.brush.stencil_dimension = dims
             bpy.context.tool_settings.image_paint.brush.stencil_pos = pos
