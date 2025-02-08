@@ -51,12 +51,21 @@ def get_anchor_coordinates():
     if qty < 1:
         return []
 
+    region_data = bpy.context.region_data
+    inv_M_view = region_data.view_matrix.to_3x3().transposed()
+    M_mesh = mesh.matrix_world.to_3x3()
+    M_adj  = inv_M_view @ M_mesh
+    
     world_matrix = np.array( mesh.matrix_world )
     
     positions = []
     for anchor in anchors:
-        pos = anchor.pos
-        positions.append( pos )
+        vertex_index = anchor.index
+        vertex_normal = mesh.data.vertices[vertex_index].normal
+        vertex_normal = M_adj @ vertex_normal
+        if vertex_normal.y >= -0.5:
+            pos = anchor.pos
+            positions.append( pos )
 
     positions = np.array( positions )
     ones = np.ones( (positions.shape[0], 1) )

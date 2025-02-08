@@ -124,7 +124,27 @@ class WM_OT_AlignStencil(bpy.types.Operator):
 
 
 
+class WM_OT_IncrementImageIndex(bpy.types.Operator):
+    bl_idname = "wm.increment_image_index"
+    bl_label = "Make brush stencil image match the reference image"
 
+    def execute(self, context):
+
+        increment_image_index()
+
+        return {'FINISHED'}
+
+
+
+class WM_OT_DecrementImageIndex(bpy.types.Operator):
+    bl_idname = "wm.decrement_image_index"
+    bl_label = "Make brush stencil image match the reference image"
+
+    def execute(self, context):
+
+        decrement_image_index()
+
+        return {'FINISHED'}
 
 
 
@@ -136,8 +156,12 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_FileSelector)
     bpy.utils.register_class(WM_OT_PlaceCamera)
     bpy.utils.register_class(WM_OT_AlignStencil)
+    bpy.utils.register_class(WM_OT_IncrementImageIndex)
+    bpy.utils.register_class(WM_OT_DecrementImageIndex)
 
 def unregister_photogrammetry():
+    bpy.utils.unregister_class(WM_OT_DecrementImageIndex)
+    bpy.utils.unregister_class(WM_OT_IncrementImageIndex)
     bpy.utils.unregister_class(WM_OT_CreateRefImages)
     bpy.utils.unregister_class(WM_OT_CallColmap)
     bpy.utils.unregister_class(WM_OT_CallFfmpeg)

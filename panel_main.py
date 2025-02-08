@@ -169,6 +169,9 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         #box.prop( props, 'index', expand=True )
         box.prop( context.scene.photogrammetry_properties, "camera_images_items", text="Ref. Image" )
         box.operator( "wm.place_camera", text="Place camera" )
+        row = box.row()
+        row.operator( "wm.decrement_image_index", text="<-" )
+        row.operator( "wm.increment_image_index", text="->" )
 
         index = props.index
         image_props = props.image_pose_properties

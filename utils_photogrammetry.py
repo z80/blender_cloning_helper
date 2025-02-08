@@ -625,6 +625,28 @@ def _show_one_image( index ):
             obj.hide_viewport = False
 
 
+def increment_image_index():
+    props = bpy.context.scene.photogrammetry_properties.image_pose_properties
+    qty = len(props)
+    index = bpy.context.scene.photogrammetry_properties.index + 1
+    if index < qty:
+        bpy.context.scene.photogrammetry_properties.index = index
+    
+    name = bpy.context.scene.photogrammetry_properties.image_pose_properties[bpy.context.scene.photogrammetry_properties.index].object_name
+    bpy.context.scene.photogrammetry_properties.camera_images_items = name
+    set_camera_to_selected_image_pose()
+
+
+
+def decrement_image_index():
+    index = bpy.context.scene.photogrammetry_properties.index - 1
+    if index >= 0:
+        bpy.context.scene.photogrammetry_properties.index = index
+
+    name = bpy.context.scene.photogrammetry_properties.image_pose_properties[bpy.context.scene.photogrammetry_properties.index].object_name
+    bpy.context.scene.photogrammetry_properties.camera_images_items = name
+    set_camera_to_selected_image_pose()
+
 
 
 def _NOT_USED_setup_stencil_painting( camera_props ):
