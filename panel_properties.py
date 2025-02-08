@@ -141,33 +141,7 @@ class MeshProp(bpy.types.PropertyGroup):
         default=True
     )
 
-    update_queue: deque = deque()
-    is_updating: bpy.props.BoolProperty(default=False)
 
-    def request_update( self ):
-        """
-        Put request update into the queue.
-        """
-        pass
-
-    def has_update_ready( self ):
-        """
-        Result is available.
-        """
-        pass
-
-    def is_update_queued( self ):
-        """
-        Check if there are update requests on queue.
-        """
-        pass
-
-    def initiate_update( self ):
-        """
-        If the update queue is not empty, 
-        initiate asynchronous update.
-        """
-        pass
 
 
 

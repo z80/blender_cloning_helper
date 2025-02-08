@@ -331,7 +331,7 @@ def depsgraph_update_handler(scene):
         return
 
     # Log or process vertices only at the end of the operation
-    print(f"End of operation: {active_operator}")
+    #print(f"End of operation: {active_operator}")
 
 
 
@@ -355,15 +355,23 @@ def depsgraph_update_handler(scene):
     did_update = False
     for vert in bm.verts:
         if vert.select:  # Check if the vertex is selected
-            verts = find_symmetric_vertices( bm, vert, axes )
-            for vert_i in verts:
-                index = vert_i.index
-                if index in anchor_indices:
-                    pos   = vert_i.co[:]
-                    # This one either updates the existing one or adds a new one.
-                    update_mesh_anchor( mesh, index, pos )
-                    inds.append(index)
-                    did_update = True
+            index = vert.index
+            if index in anchor_indices:
+                pos   = vert.co[:]
+                # This one either updates the existing one or adds a new one.
+                update_mesh_anchor( mesh, index, pos )
+                inds.append(index)
+                did_update = True
+
+            #verts = find_symmetric_vertices( bm, vert, axes )
+            #for vert_i in verts:
+            #    index = vert_i.index
+            #    if index in anchor_indices:
+            #        pos   = vert_i.co[:]
+            #        # This one either updates the existing one or adds a new one.
+            #        update_mesh_anchor( mesh, index, pos )
+            #        inds.append(index)
+            #        did_update = True
 
     if did_update:
         # Update the scene and force redraw
