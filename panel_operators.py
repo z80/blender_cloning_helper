@@ -4,7 +4,9 @@ import bmesh
 import mathutils
 from bpy_extras.view3d_utils import location_3d_to_region_2d
 from bpy_extras.view3d_utils import region_2d_to_vector_3d
-
+from bpy.types import Operator
+from bpy_extras.io_utils import ImportHelper
+from bpy.props import StringProperty
 
 import sys
 import os
@@ -220,6 +222,92 @@ class MESH_OT_apply_metric_to_selected( bpy.types.Operator ):
 
 
 
+
+
+class MESH_OT_reset_selected( bpy.types.Operator ):
+    """
+    Reset selected pins to default coordinates
+    """
+    
+    bl_idname = "mesh.reset_selected_pins"
+    bl_label  = "Reset selected pins to default coordinates."
+    
+    @classmethod
+    def poll( cls, context ):
+        # There should be a mesh in the consideration.
+        mesh = get_selected_mesh()
+        if mesh is None:
+            return False
+        
+        return True
+    
+    
+    def execute( self, context ):
+        reset_selected_pins()
+        return {"FINISHED"}
+
+
+
+
+
+class OT_SaveFile(Operator):
+    bl_idname = "file.save_pins"
+    bl_label = "Save Pins to a File"
+
+    filepath: StringProperty(
+        name="File Path",
+        description="Path to the file to be saved",
+        maxlen=1024,
+        default="",
+        subtype='FILE_PATH'
+    )
+
+    def execute(self, context):
+        # Create a dictionary to hold the custom properties
+        save_pins( self.filepath )
+
+        print(f"JSON data saved to: {self.filepath}")
+        return {'FINISHED'}
+
+
+    def invoke(self, context, event):
+        context.window_manager.fileselect_add(self)
+        return {'RUNNING_MODAL'}
+
+    def check(self, context):
+        if not self.filepath.lower().endswith(".json"):
+            self.filepath += ".json"
+        return True
+
+
+
+
+
+
+class OT_OpenFile(Operator, ImportHelper):
+    bl_idname = "file.load_pins"
+    bl_label = "Open File and Load Pins"
+
+    filter_glob: StringProperty(
+        default="*.json",
+        options={'HIDDEN'}
+    )
+
+    filepath: StringProperty(
+        name="File Path",
+        description="Path to the file to be opened",
+        maxlen=1024,
+        default=""
+    )
+    
+    def execute(self, context):
+        load_pins( self.filepath )
+        print(f"Selected file: {self.filepath}")
+        return {'FINISHED'}
+
+
+
+
 # Handler function to track changes
 def depsgraph_update_handler(scene):
     # Check if the active object is a mesh in EDIT mode
@@ -307,6 +395,9 @@ def register_operators():
     bpy.utils.register_class(MESH_OT_remove_anchors)
     bpy.utils.register_class(MESH_OT_apply_radius_to_selected)
     bpy.utils.register_class(MESH_OT_apply_metric_to_selected)
+    bpy.utils.register_class(MESH_OT_reset_selected)
+    bpy.utils.register_class(OT_SaveFile)
+    bpy.utils.register_class(OT_OpenFile)
 
     # Register the depsgraph update handler
     bpy.app.handlers.depsgraph_update_post.append(depsgraph_update_handler)
@@ -314,6 +405,9 @@ def register_operators():
 
 
 def unregister_operators():
+    bpy.utils.unregister_class(OT_OpenFile)
+    bpy.utils.unregister_class(OT_SaveFile)
+    bpy.utils.unregister_class(MESH_OT_reset_selected)
     bpy.utils.unregister_class(MESH_OT_apply_metric_to_selected)
     bpy.utils.unregister_class(MESH_OT_apply_radius_to_selected)
     bpy.utils.unregister_class(MESH_OT_remove_anchors)

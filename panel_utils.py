@@ -8,6 +8,7 @@ from bpy_extras.view3d_utils import region_2d_to_vector_3d
 
 import sys
 import os
+import json
 
 import numpy as np
 
@@ -390,6 +391,101 @@ def get_all_selected_anchors():
             selected_anchors.append( anchor )
 
     return selected_anchors
+
+
+
+
+def reset_selected_pins():
+    """
+    Restore coordinates of selected anchors to what they were 
+    in unmodified mesh.
+    """
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return
+
+    shape = mesh.data.mesh_prop.original_shape
+
+    anchors = get_all_selected_anchors()
+    for anchor in anchors:
+        index = anchor.index
+        vert_data = shape[index]
+        pos = vert_data.pos
+        anchor.pos = ( pos[0], pos[1], pos[2] )
+
+    # Update the scene and force redraw
+    bpy.context.view_layer.update()  # Update the view layer
+    for area in bpy.context.screen.areas:
+        if area.type == 'VIEW_3D':
+            area.tag_redraw()
+
+
+
+def serialize_pins():
+    """
+    All pins -> JSON.
+    """
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return
+
+    
+    anchors = mesh.data.mesh_prop.anchors
+    data = []
+    for anchor in anchors:
+        pos    = anchor.pos[:]
+        index  = anchor.index
+        radius = anchor.radius
+        metric = anchor.metric
+        item = { "pos": pos, "index": index, "radius": radius, "metric": metric }
+        data.append( item )
+
+    return data
+
+
+def save_pins( file_name ):
+    data = serialize_pins()
+    data_stri = json.dumps( data, indent=4 )
+    with open( file_name, "w" ) as file:
+        file.write( data_stri )
+        
+
+
+
+def deserialize_pins( data ):
+    """
+    JSON -> all pins.
+    """
+
+    mesh = get_selected_mesh()
+    if mesh is None:
+        return None
+    
+    anchors = mesh.data.mesh_prop.anchors
+    anchors.clear()
+    for item in data:
+        anchor = anchors.add()
+        anchor.pos    = item["pos"]
+        anchor.index  = item["index"]
+        anchor.radius = item["radius"]
+        anchor.metric = item["metric"]
+
+
+def load_pins( file_name ):
+    #import pdb
+    #pdb.set_trace()
+
+    with open( file_name, "r" ) as file:
+        data_stri = file.read()
+        data = json.loads( data_stri )
+
+    if data is not None:
+        deserialize_pins( data )
+
+
+
 
 
 

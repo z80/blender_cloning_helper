@@ -89,6 +89,7 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             
                 box.operator( "mesh.apply_radius",  text="Radius -> all selected" )
                 box.operator( "mesh.apply_metric",  text="Metric -> all selected" )
+                box.operator( "mesh.reset_selected_pins", text="Reset Selected Positions" )
 
                 layout.separator()
             
@@ -96,12 +97,19 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             row.scale_y = 2.0
             layout.prop( mesh.data.mesh_prop, 'draw_pins', text="Draw Pins" )
             row.operator( "mesh.apply_transform",  text="Apply transform" )
-            layout.separator()
 
+            layout.separator()
             #layout.operator( "mesh.apply_transform",  text="Apply transform" )
             layout.operator( "mesh.revert_transform", text="Show original shape" )
             layout.operator( "mesh.add_anchors",      text="Make selected pins" )
             layout.operator( "mesh.remove_anchors",   text="Clear selected pins" )
+
+            layout.separator()
+            
+            box = layout.box()
+            row = box.row()
+            row.operator( "file.save_pins",  text="Save Pins" )
+            row.operator( "file.load_pins",  text="Load Pins" )
 
 
 
