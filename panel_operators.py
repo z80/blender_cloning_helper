@@ -262,6 +262,11 @@ class OT_SaveFile(Operator):
         subtype='FILE_PATH'
     )
 
+    filter_glob: StringProperty(
+        default="*.json",
+        options={'HIDDEN'}
+    )
+
     def execute(self, context):
         # Create a dictionary to hold the custom properties
         save_pins( self.filepath )
@@ -287,6 +292,11 @@ class OT_SaveFile(Operator):
 class OT_OpenFile(Operator, ImportHelper):
     bl_idname = "file.load_pins"
     bl_label = "Open File and Load Pins"
+
+    filter_glob: StringProperty(
+        default="*.json",
+        options={'HIDDEN'}
+    )
 
     filter_glob: StringProperty(
         default="*.json",
@@ -334,19 +344,18 @@ def depsgraph_update_handler(scene):
     #print(f"End of operation: {active_operator}")
 
 
-
     # Access the bmesh for the edit mesh
     bm = bmesh.from_edit_mesh(mesh.data)
     bm.verts.ensure_lookup_table()
 
     # Check for enabled symmetries.
-    axes = []
-    if mesh.use_mesh_mirror_x:
-        axes.append(0)
-    if mesh.use_mesh_mirror_y:
-        axes.append(1)
-    if mesh.use_mesh_mirror_z:
-        axes.append(2)
+    #axes = []
+    #if mesh.use_mesh_mirror_x:
+    #    axes.append(0)
+    #if mesh.use_mesh_mirror_y:
+    #    axes.append(1)
+    #if mesh.use_mesh_mirror_z:
+    #    axes.append(2)
 
     anchor_indices = get_anchor_indices( mesh )
 
