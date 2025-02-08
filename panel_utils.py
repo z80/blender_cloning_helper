@@ -462,7 +462,11 @@ def deserialize_pins( data ):
     mesh = get_selected_mesh()
     if mesh is None:
         return None
-    
+
+    mode_save = bpy.context.object.mode
+    # Switch to object mode.
+    bpy.ops.object.mode_set(mode='OBJECT') 
+
     anchors = mesh.data.mesh_prop.anchors
     anchors.clear()
     for item in data:
@@ -471,6 +475,8 @@ def deserialize_pins( data ):
         anchor.index  = item["index"]
         anchor.radius = item["radius"]
         anchor.metric = item["metric"]
+
+    bpy.ops.object.mode_set(mode=mode_save) 
 
 
 def load_pins( file_name ):
