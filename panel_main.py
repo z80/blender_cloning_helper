@@ -170,6 +170,13 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         box.prop( context.scene.photogrammetry_properties, "camera_images_items", text="Ref. Image" )
         box.operator( "wm.place_camera", text="Place camera" )
 
+        index = props.index
+        image_props = props.image_pose_properties
+        qty = len(image_props)
+        if (index >= 0) and (index < qty):
+            image_prop = image_props[index]
+            box.prop( image_prop, "user_label", text="Img. label" )
+
         layout.separator()
 
 

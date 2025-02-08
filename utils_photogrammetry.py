@@ -110,7 +110,17 @@ def call_colmap(colmap_path):
 
 
 def _get_camera_images(self, context):
-    items = [(item.object_name, item.object_name, "") for item in context.scene.photogrammetry_properties.image_pose_properties]
+    items = []
+    for item in context.scene.photogrammetry_properties.image_pose_properties:
+        label = item.user_label
+        qty = len(label)
+        if qty > 0:
+            v = (item.object_name, item.user_label, "")
+        else:
+            v = (item.object_name, item.object_name, "")
+        items.append( v )
+        
+    #items = [(item.object_name, item.object_name, "") for item in context.scene.photogrammetry_properties.image_pose_properties]
     return items
 
 
@@ -134,6 +144,13 @@ class ImagePoseProperties(bpy.types.PropertyGroup):
         description="Reference image object name",
         default=""
     )
+
+    user_label: bpy.props.StringProperty(
+        name="Label",
+        description="Additional text label for ease of picking in the list",
+        default=""
+    )
+
 
     transform: bpy.props.FloatVectorProperty(
         name="Transform",
