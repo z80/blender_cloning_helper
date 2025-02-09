@@ -1,7 +1,7 @@
 
 import numpy as np
 
-def RBF_transform(V, fixed_vertices, fixed_positions, distances, regularization=0.0001, apply_rigid_rotation=False):
+def RBF_transform(V, fixed_vertices, fixed_positions, distances, influence_radius, regularization=0.0001, apply_rigid_rotation=False):
     """
     Apply rigid body transformation and interpolate displacements using Gaussian Process.
 
