@@ -561,7 +561,7 @@ def get_mesh_update_data( mesh ):
 
 
 def apply_to_mesh( mesh, V_new ):
-    unselect_all_vertices( mesh )
+    #unselect_all_vertices( mesh )
 
     verts = mesh.data.vertices
     verts_qty = V_new.shape[0]
@@ -589,7 +589,7 @@ def apply_to_mesh( mesh, V_new ):
 
 
 def show_original_mesh( mesh ):
-    unselect_all_vertices( mesh )
+    #unselect_all_vertices( mesh )
 
     verts = mesh.data.vertices
     verts_qty = len(verts)
