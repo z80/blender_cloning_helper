@@ -7,6 +7,7 @@ import numpy as np
 import mathutils
 from mathutils import Matrix, Quaternion, Vector
 
+import utils_filesystem
 
 def extract_frames_with_ffmpeg(video_path, ffmpeg_path, start_time, end_time, frames_qty, seconds_qty, scale_percentage=20.0 ):
     # Get the directory of the current Blender file
@@ -68,9 +69,18 @@ def call_colmap(colmap_path):
     colmap_folder = os.path.join(blender_file_dir, 'colmap')
     photogrammetry_folder = os.path.join(blender_file_dir, 'photogrammetry')
 
+    has_spaces_in_filenames = utils_filesystem.contains_space_in_filename( image_path )
+    if has_spaces_in_filenames:
+        utils_filesystem.rename_files( image_path )
+
     # Create directories if they don't exist
     os.makedirs(colmap_folder, exist_ok=True)
     os.makedirs(photogrammetry_folder, exist_ok=True)
+
+    # Prior to running photogrammetry need to delete everything already there.
+    # Otherwise COLMAP doesn't behave.
+    utils_filesystem.delete_folder_contents( colmap_folder )
+    utils_filesystem.delete_folder_contents( photogrammetry_folder )
 
     # Define database path
     database_path = os.path.join(colmap_folder, 'database.db')
