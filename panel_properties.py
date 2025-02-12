@@ -119,9 +119,16 @@ class MeshProp(bpy.types.PropertyGroup):
 
     normal_importance: bpy.props.FloatProperty(
         name="Normal Importance", 
-        description="How much normal direction is moreimportant than tangential direction", 
+        description="How much normal direction is moreimportant than tangential direction. Do not use too large values, it gets unstable for values greater than 5.", 
         default = 1.0, 
         min = 0.01
+    )
+
+    num_iterations: bpy.props.IntProperty( 
+        name='Elastic Iterations', 
+        description='How many iterations the elastic deformation computation takes. The bigger the number, the closer it is to the true elastic fabric.', 
+        default=1, 
+        min=1
     )
 
     step_3: bpy.props.EnumProperty(

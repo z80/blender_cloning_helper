@@ -71,6 +71,7 @@ class MESH_PT_MeshEditPanel(bpy.types.Panel):
             box.prop(mesh_prop, 'step_2')
             if ( mesh_prop.step_2 != 'none' ):
                 box.prop( mesh.data.mesh_prop, 'normal_importance' )
+                box.prop( mesh.data.mesh_prop, 'num_iterations' )
 
             if mesh_prop.step_2 != 'none':
                 box = layout.box()

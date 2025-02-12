@@ -10,7 +10,7 @@ from utils_falloff    import *
 
 VERY_FAR_DISTANCE = 1.0e10
 
-def smooth_transform( V, F, fixed_data, use_algorithm, step_2, normal_importance, step_3, apply_rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon ):
+def smooth_transform( V, F, fixed_data, use_algorithm, step_2, normal_importance, num_iterations, step_3, apply_rigid_transform, decay_radius, gp_radius, gp_regularization, id_power, id_epsilon ):
 
     qty = len( fixed_data )
     fixed_positions  = np.zeros( (qty, 3) )
@@ -63,8 +63,7 @@ def smooth_transform( V, F, fixed_data, use_algorithm, step_2, normal_importance
         #pdb.set_trace()
 
         # V, F, distances, fixed_vertices, fixed_positions, iterations, max_importance, min_importance, influence_radii, falloff_func, V_initial=None
-        iterations = 1
-        V_arap = elastic( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, iterations, normal_importance, 1.0, influence_radii, falloff_function, V_idt )
+        V_arap = elastic( reachable_V, reachable_F, reachable_distances, fixed_vertices, fixed_positions, num_iterations, normal_importance, 1.0, influence_radii, falloff_function, V_idt )
         modified_reachable_V = V_arap
 
         if step_3:
