@@ -47,7 +47,7 @@ def smooth_transform( V, F, fixed_data, use_algorithm, step_2, normal_importance
         modified_reachable_V, R, T = inverse_distance_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, influence_radii, id_power, id_epsilon, apply_rigid_transform )
     elif use_algorithm == 'gaussian_proc':
         #modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, mean_radius, normalized=normalized_gp )
-        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, gp_radius, gp_regularization, apply_rigid_transform )
+        modified_reachable_V, R, T = gaussian_process_transform( reachable_V, fixed_vertices, fixed_positions, reachable_distances, decay_radius, influence_radii, gp_regularization, apply_rigid_transform )
     
     # This is an initial approximaion for elastic transform.
     V_idt = modified_reachable_V.copy()

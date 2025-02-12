@@ -52,7 +52,7 @@ def gaussian_process_transform(V, fixed_vertices, fixed_positions, distances, de
     K_regularization = regularization * np.eye(K.shape[0])
     K += K_regularization
 
-    K_star = rbf_kernel(distances, influence_radius)                # Kernel between all points and fixed points
+    K_star = rbf_kernel( distances, influence_radius[:, None] )                # Kernel between all points and fixed points
     decay_weights = rbf_kernel( distances, decay_radius )
     K_star *= decay_weights
 
