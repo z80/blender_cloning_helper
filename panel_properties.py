@@ -119,7 +119,7 @@ class MeshProp(bpy.types.PropertyGroup):
 
     normal_importance: bpy.props.FloatProperty(
         name="Normal Importance", 
-        description="How much normal direction is moreimportant than tangential direction. Do not use too large values, it gets unstable for values greater than 5.", 
+        description="How much normal direction is more important than tangential direction. Do not use too large values, it gets unstable for values greater than 4.", 
         default = 1.0, 
         min = 0.01
     )
