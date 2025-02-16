@@ -159,6 +159,9 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         box.prop( props, 'additional_displacement', expand=True )
         box.prop( props, 'additional_rotation', expand=True )
         box.prop( props, 'additional_scale', expand=True )
+        box.operator( "wm.assign_transform_from", text="Transform From" )
+        box.operator( "wm.assign_transform_to", text="Transform To" )
+        box.operator( "wm.reset_transforms_from_to", text="Reset Transforms From To" )
         box.operator( "wm.create_ref_images", text="Create Ref Images" )
 
         layout.separator()

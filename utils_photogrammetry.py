@@ -228,6 +228,30 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
         description="Photogrammetry additional scale", 
         default=1.0 )
 
+
+    transform_to: bpy.props.FloatVectorProperty(
+        name="Transform To",
+        description="Desired transform of the object and the set of camera poses", 
+        size=16,
+        subtype='MATRIX',
+        default=[1.0, 0.0, 0.0, 0.0,  # 4x4 identity matrix
+                 0.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0]
+    )
+
+    transform_from: bpy.props.FloatVectorProperty(
+        name="Transform From",
+        description="Current transform of the object and the set of camera poses", 
+        size=16,
+        subtype='MATRIX',
+        default=[1.0, 0.0, 0.0, 0.0,  # 4x4 identity matrix
+                 0.0, 1.0, 0.0, 0.0,
+                 0.0, 0.0, 1.0, 0.0,
+                 0.0, 0.0, 0.0, 1.0]
+    )
+
+
     show_point_cloud: bpy.props.BoolProperty( 
         name='Show point cloud', 
         description='Whether the point cloud should be visualized or not', 
@@ -296,6 +320,19 @@ def _get_adjustment_transform():
     scale_mat = mathutils.Matrix.Scale(scale, 4)
     # Combine the matrices to form the transformation matrix
     transform_mat = trans_mat @ rot_mat @ scale_mat
+
+
+    # Take into account trasnform_from and transform_to
+    t_to = displacement = bpy.context.scene.photogrammetry_properties.transform_to
+    transform_to = Matrix( t_to ).transposed()
+    t_from = displacement = bpy.context.scene.photogrammetry_properties.transform_from
+    transform_from = Matrix( t_from ).transposed()
+    inv_transform_from = transform_from.inverted()
+
+    adj_transform = inv_transform_from @ transform_to
+
+    transform_mat = adj_transform @ transform_mat
+
     return transform_mat
 
 
@@ -656,6 +693,50 @@ def decrement_image_index():
     name = bpy.context.scene.photogrammetry_properties.image_pose_properties[bpy.context.scene.photogrammetry_properties.index].object_name
     bpy.context.scene.photogrammetry_properties.camera_images_items = name
     set_camera_to_selected_image_pose()
+
+
+
+
+def assign_transform_from():
+    selected_objects = bpy.context.selected_objects
+    qty = len(selected_objects)
+    if qty < 1:
+        bpy.context.scene.photogrammetry_properties.transform_from = Matrix.Identity(4)
+
+    else:
+        m = selected_objects[0].matrix_world
+        bpy.context.scene.photogrammetry_properties.transform_from = [elem for row in m for elem in row]
+
+        # For debugging read it back.
+        bbb = Matrix( bpy.context.scene.photogrammetry_properties.transform_from )
+        print( "Stored:" )
+        print( m )
+        print( "Restored:" )
+        print( bbb )
+         
+
+        
+
+
+
+def assign_transform_to():
+    selected_objects = bpy.context.selected_objects
+    qty = len(selected_objects)
+    if qty < 1:
+        bpy.context.scene.photogrammetry_properties.transform_to = Matrix.Identity(4)
+
+    else:
+        m = selected_objects[0].matrix_world
+        bpy.context.scene.photogrammetry_properties.transform_to = [elem for row in m for elem in row]
+
+
+
+
+def clear_transforms_from_to():
+    bpy.context.scene.photogrammetry_properties.transform_from = Matrix.Identity(4)
+    bpy.context.scene.photogrammetry_properties.transform_to   = Matrix.Identity(4)
+
+
 
 
 
