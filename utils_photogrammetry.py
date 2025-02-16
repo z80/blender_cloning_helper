@@ -228,6 +228,12 @@ class PhotogrammetryProperties(bpy.types.PropertyGroup):
         description="Photogrammetry additional scale", 
         default=1.0 )
 
+    
+    object_name_to: bpy.props.StringProperty( 
+        name="Object To Name", 
+        description="Store object name to assign 'to' transform", 
+        default=""
+    )
 
     transform_to: bpy.props.FloatVectorProperty(
         name="Transform To",
@@ -708,7 +714,7 @@ def assign_transform_from():
         bpy.context.scene.photogrammetry_properties.transform_from = [elem for row in m for elem in row]
 
         # For debugging read it back.
-        bbb = Matrix( bpy.context.scene.photogrammetry_properties.transform_from )
+        bbb = Matrix( bpy.context.scene.photogrammetry_properties.transform_from ).transposed()
         print( "Stored:" )
         print( m )
         print( "Restored:" )
@@ -724,19 +730,30 @@ def assign_transform_to():
     qty = len(selected_objects)
     if qty < 1:
         bpy.context.scene.photogrammetry_properties.transform_to = Matrix.Identity(4)
+        bpy.context.scene.photogrammetry_properties.object_name_to = ""
 
     else:
-        m = selected_objects[0].matrix_world
+        obj = selected_objects[0]
+        m = obj.matrix_world
         bpy.context.scene.photogrammetry_properties.transform_to = [elem for row in m for elem in row]
+        bpy.context.scene.photogrammetry_properties.object_name_to = obj.name
 
 
 
 
 def clear_transforms_from_to():
-    bpy.context.scene.photogrammetry_properties.transform_from = Matrix.Identity(4)
-    bpy.context.scene.photogrammetry_properties.transform_to   = Matrix.Identity(4)
+    m = Matrix.Identity(4)
+    bpy.context.scene.photogrammetry_properties.transform_from = [elem for row in m for elem in row]
+    bpy.context.scene.photogrammetry_properties.transform_to   = [elem for row in m for elem in row]
+    bpy.context.scene.photogrammetry_properties.object_name_to = ""
 
 
+def move_object_to():
+    name = bpy.context.scene.photogrammetry_properties.object_name_to
+    if name in bpy.data.objects:
+        obj = bpy.data.objects[name]
+        m = Matrix( bpy.context.scene.photogrammetry_properties.transform_to ).transposed()
+        obj.matrix_world = m
 
 
 

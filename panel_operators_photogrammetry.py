@@ -34,6 +34,7 @@ class WM_OT_CreateRefImages(bpy.types.Operator):
         delete_ref_images()
         populate_camera_poses()
         create_ref_images()
+        move_object_to()
 
         return {'FINISHED'}
 
@@ -177,7 +178,7 @@ class WM_OT_ResetTransformsFromTo(bpy.types.Operator):
 
     def execute(self, context):
 
-        reset_transforms_from_to()
+        clear_transforms_from_to()
 
         return {'FINISHED'}
 
