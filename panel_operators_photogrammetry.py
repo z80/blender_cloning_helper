@@ -177,7 +177,7 @@ class WM_OT_MoveObjectTo(bpy.types.Operator):
 
     def execute(self, context):
 
-        move_object_to_to()
+        move_object_to()
 
         return {'FINISHED'}
 
@@ -195,7 +195,6 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_AlignStencil)
     bpy.utils.register_class(WM_OT_IncrementImageIndex)
     bpy.utils.register_class(WM_OT_DecrementImageIndex)
-    bpy.utils.register_class(WM_OT_AssignTransformFrom)
     bpy.utils.register_class(WM_OT_AssignTransformTo)
     bpy.utils.register_class(WM_OT_MoveObjectTo)
     bpy.utils.register_class(WM_OT_AdjustPhotogrammetryTransform)
@@ -204,7 +203,6 @@ def unregister_photogrammetry():
     bpy.utils.unregister_class(WM_OT_AdjustPhotogrammetryTransform)
     bpy.utils.unregister_class(WM_OT_MoveObjectTo)
     bpy.utils.unregister_class(WM_OT_AssignTransformTo)
-    bpy.utils.unregister_class(WM_OT_AssignTransformFrom)
     bpy.utils.unregister_class(WM_OT_DecrementImageIndex)
     bpy.utils.unregister_class(WM_OT_IncrementImageIndex)
     bpy.utils.unregister_class(WM_OT_CreateRefImages)
