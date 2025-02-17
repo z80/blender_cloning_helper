@@ -327,18 +327,6 @@ def _get_adjustment_transform():
     # Combine the matrices to form the transformation matrix
     transform_mat = trans_mat @ rot_mat @ scale_mat
 
-
-    # Take into account trasnform_from and transform_to
-    t_to = displacement = bpy.context.scene.photogrammetry_properties.transform_to
-    transform_to = Matrix( t_to ).transposed()
-    t_from = displacement = bpy.context.scene.photogrammetry_properties.transform_from
-    transform_from = Matrix( t_from ).transposed()
-    inv_transform_from = transform_from.inverted()
-
-    adj_transform = inv_transform_from @ transform_to
-
-    transform_mat = adj_transform @ transform_mat
-
     return transform_mat
 
 
@@ -703,25 +691,18 @@ def decrement_image_index():
 
 
 
-def assign_transform_from():
+def _get_transform_from():
     selected_objects = bpy.context.selected_objects
     qty = len(selected_objects)
     if qty < 1:
-        bpy.context.scene.photogrammetry_properties.transform_from = Matrix.Identity(4)
+        return Matrix.Identity(4)
 
-    else:
-        m = selected_objects[0].matrix_world
-        bpy.context.scene.photogrammetry_properties.transform_from = [elem for row in m for elem in row]
+    m = selected_objects[0].matrix_world
+    return m
 
-        # For debugging read it back.
-        bbb = Matrix( bpy.context.scene.photogrammetry_properties.transform_from ).transposed()
-        print( "Stored:" )
-        print( m )
-        print( "Restored:" )
-        print( bbb )
-         
 
-        
+
+ 
 
 
 
@@ -740,20 +721,43 @@ def assign_transform_to():
 
 
 
-
-def clear_transforms_from_to():
-    m = Matrix.Identity(4)
-    bpy.context.scene.photogrammetry_properties.transform_from = [elem for row in m for elem in row]
-    bpy.context.scene.photogrammetry_properties.transform_to   = [elem for row in m for elem in row]
-    bpy.context.scene.photogrammetry_properties.object_name_to = ""
-
-
 def move_object_to():
     name = bpy.context.scene.photogrammetry_properties.object_name_to
     if name in bpy.data.objects:
         obj = bpy.data.objects[name]
         m = Matrix( bpy.context.scene.photogrammetry_properties.transform_to ).transposed()
         obj.matrix_world = m
+
+
+def adjust_photogrammetry_transform():
+    transform_mat = _get_adjustment_transform()
+
+    # Take into account trasnform_from and transform_to
+    t_to = displacement = bpy.context.scene.photogrammetry_properties.transform_to
+    transform_to = Matrix( t_to ).transposed()
+    transform_from = _get_transform_from()
+    inv_transform_from = transform_from.inverted()
+
+    adj_transform = inv_transform_from @ transform_to
+
+    transform_mat = adj_transform @ transform_mat
+
+    # Decompose it back into translation, rotation, and scale.
+    # Decompose the matrix to get the quaternion rotation
+    translation, rotation_quat, scale = transform_mat.decompose()
+
+    # Convert the quaternion to Euler angles
+    rotation_euler = rotation_quat.to_euler('XYZ')
+
+    # Compute scalar scale.
+    scale_scalar = ( scale.x + scale.y + scale.z ) / 3.0
+
+    bpy.context.scene.photogrammetry_properties.additional_displacement = translation
+    bpy.context.scene.photogrammetry_properties.additional_rotation     = rotation_euler
+    bpy.context.scene.photogrammetry_properties.additional_scale        = scale_scalar
+
+    move_object_to()
+
 
 
 

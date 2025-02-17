@@ -149,17 +149,6 @@ class WM_OT_DecrementImageIndex(bpy.types.Operator):
 
 
 
-class WM_OT_AssignTransformFrom(bpy.types.Operator):
-    bl_idname = "wm.assign_transform_from"
-    bl_label = "Assign transform from"
-
-    def execute(self, context):
-
-        assign_transform_from()
-
-        return {'FINISHED'}
-
-
 class WM_OT_AssignTransformTo(bpy.types.Operator):
     bl_idname = "wm.assign_transform_to"
     bl_label = "Assign transform to"
@@ -170,17 +159,30 @@ class WM_OT_AssignTransformTo(bpy.types.Operator):
 
         return {'FINISHED'}
 
+class WM_OT_AdjustPhotogrammetryTransform(bpy.types.Operator):
+    bl_idname = "wm.adjust_photogrammetry_transform"
+    bl_label = "Assign transform to"
+
+    def execute(self, context):
+
+        adjust_photogrammetry_transform()
+
+        return {'FINISHED'}
 
 
-class WM_OT_ResetTransformsFromTo(bpy.types.Operator):
-    bl_idname = "wm.reset_transforms_from_to"
+
+class WM_OT_MoveObjectTo(bpy.types.Operator):
+    bl_idname = "wm.move_object_to"
     bl_label = "Reset transforms from to"
 
     def execute(self, context):
 
-        clear_transforms_from_to()
+        move_object_to_to()
 
         return {'FINISHED'}
+
+
+
 
 
 
@@ -195,10 +197,12 @@ def register_photogrammetry():
     bpy.utils.register_class(WM_OT_DecrementImageIndex)
     bpy.utils.register_class(WM_OT_AssignTransformFrom)
     bpy.utils.register_class(WM_OT_AssignTransformTo)
-    bpy.utils.register_class(WM_OT_ResetTransformsFromTo)
+    bpy.utils.register_class(WM_OT_MoveObjectTo)
+    bpy.utils.register_class(WM_OT_AdjustPhotogrammetryTransform)
 
 def unregister_photogrammetry():
-    bpy.utils.unregister_class(WM_OT_ResetTransformsFromTo)
+    bpy.utils.unregister_class(WM_OT_AdjustPhotogrammetryTransform)
+    bpy.utils.unregister_class(WM_OT_MoveObjectTo)
     bpy.utils.unregister_class(WM_OT_AssignTransformTo)
     bpy.utils.unregister_class(WM_OT_AssignTransformFrom)
     bpy.utils.unregister_class(WM_OT_DecrementImageIndex)
