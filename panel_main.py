@@ -159,9 +159,9 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         box.operator( "wm.assign_transform_to", text="Remember Transform To" )
         box.operator( "wm.adjust_photogrammetry_transform", text="Adjust Photogrammetry Transform" )
         box.operator( "wm.move_object_to", text="Reset Object Transform" )
-        box.prop( props, 'additional_displacement', expand=True )
-        box.prop( props, 'additional_rotation', expand=True )
-        box.prop( props, 'additional_scale', expand=True )
+        box.prop( props, 'additional_displacement', expand=True, precision=6 )
+        box.prop( props, 'additional_rotation', expand=True, precision=6 )
+        box.prop( props, 'additional_scale', expand=True, precision=6 )
         box.operator( "wm.create_ref_images", text="Create Ref Images" )
 
         layout.separator()
