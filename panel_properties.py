@@ -200,6 +200,14 @@ class ToolProperties(bpy.types.PropertyGroup):
         min=-1.0
     )
 
+    ffmpeg_image_scale: bpy.props.FloatProperty( 
+        name='Image scale %', 
+        description='How much scale the images extracted from the video', 
+        default=100.0, 
+        min=1.0, 
+        max=100.0
+    )
+
 
 
 

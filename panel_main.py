@@ -136,6 +136,7 @@ class MESH_PT_ToolPathsPanel(bpy.types.Panel):
         box.label(text="FFMPEG path")
         box.prop(tool_paths, "ffmpeg_path")
 
+        box.prop(tool_paths, "ffmpeg_image_scale", text="Image scale %")
         box.prop(tool_paths, "ffmpeg_frames")
         box.prop(tool_paths, "ffmpeg_seconds")
         box.prop(tool_paths, "ffmpeg_start_time", text="Start time")
