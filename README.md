@@ -36,7 +36,7 @@ Use **Photogrammetry** "Extract camera poses" button to solve for the camera pos
 
 ### 4. Save target mesh transform
 
-You need a base mesh. Here in the example it is a base human mesh from "Humab Base Meshes" Blender free library. It is necessary to align the camera poses to this base mesh. But it is difficult. Instead, we align the mesh to camera poses and point cloud and then "undo" the transform to both the mesh and the images. It makes the mesh to be in its original pose and camera images aligned to it. But first it is necessary to memorize the mesh transform we want to align camera images to. Press "Remember Transform To".
+You need a base mesh. Here in the example it is a base human mesh from "Human Base Meshes" Blender free library. It is necessary to align the camera poses to this base mesh. But it is difficult. Instead, we align the mesh to camera poses and point cloud and then "undo" the transform to both the mesh and the images. It makes the mesh to be in its original pose and camera images aligned to it. But first it is necessary to memorize the mesh transform we want to align camera images to. Press "Remember Transform To".
 
 ![](docs/images/03_save_target_mesh_transform.jpg)
 
