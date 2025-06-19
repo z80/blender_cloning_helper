@@ -1,6 +1,6 @@
 # Not an artist? - Not a problem! Blender Cloning Helper
 
-**No artistic skills? - not a problem! Math can help you create perfect copies of people and objects using a referance video!**
+**No artistic skills? - not a problem! Math can help you create perfect copies of people and objects using a reference video!**
 
 A Blender addon that integrates COLMAP photogrammetry with powerful tools for texture painting, image alignment, and UDIM material creation. Designed to simplify photogrammetry workflows and enable accurate 3D reconstruction from video-derived frames. Inspired by ([Facebuilder](https://keentools.io/products/facebuilder-for-blender)) but made to be usable for any object.
 
