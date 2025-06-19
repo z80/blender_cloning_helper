@@ -31,7 +31,7 @@ Use **Photogrammetry** side panel to extract images from a video. If you have im
 
 Use **Photogrammetry** "Extract camera poses" button to solve for the camera poses and 3d point cloud.
 
-![](docs/images/00_solve_photogrammetry.jpg)
+![](docs/images/01_solve_photogrammetry.jpg)
 
 ### 4. Save target mesh transform
 
