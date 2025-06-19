@@ -12,27 +12,71 @@ A Blender addon that integrates COLMAP photogrammetry with powerful tools for te
 - Automatic UDIM material builder
 - Built-in FFmpeg support: extract frames from video input (e.g., phone selfie)
 
-## Visual Overview
-
-Reference image placement  
-![Scene Reference](docs/images/reference_viewport.png)
-
-Stencil buffer texture for painting  
-![Stencil Texture](docs/images/stencil_buffer_example.png)
-
-UDIM material layout  
-![UDIM Example](docs/images/udim_example.png)
-
 ## Usage Workflow
 
-1. Extract video frames using the FFmpeg operator
-2. Reconstruct the scene using COLMAP
-3. Import COLMAP results into Blender using the addon
-4. Align a base mesh to the point cloud and image planes
-5. Sculpt the base mesh to perfectly match the object outline to reference images
-6. Create UDIM materials
-7. Generate stencil textures to texture paint a detailed model
-8. Texture paint the object
+### 1. Capture a video of an object.
+
+For a real world object use your smartphone. Record a video with predominantly overlapping field of view. Try to capture the object from all angles.
+
+For a virtual object in a video game use photo mode. Fly around the object, try capturing the object from all directions. Make overlapping snapshots or a continuous video file.
+
+### 2. Extract video frames using the FFmpeg operator
+Use **Photogrammetry** side panel to extract images from a video. If you have image files, place them to "images" folder adjacent to the blender file.
+![](docs/images/00_extract_frames.jpg)
+
+
+### 3. Reconstruct the scene using COLMAP
+
+Use **Photogrammetry** "Extract camera poses" button to solve for the camera poses and 3d point cloud.
+
+![](docs/images/00_solve_photogrammetry.jpg)
+
+### 4. Save target mesh transform
+
+You need a base mesh. Here the esample is a base human mesh from "Humab Base Meshes" Blender free library. It is necessary to align the camera poses to this base mesh. But it is difficult. Instead, we align the mesh to camera poses and point cloud and then "undo" the transform to both the mesh and the images. It makes the mesh to be in its original pose and camera images aligned to it. But first it is necessary to memorize the mesh transform we want to align camera images to. Press "Remember Transform To".
+
+![](docs/images/03_save_target_mesh_transform.jpg)
+
+
+### 5. Align the object to images and the point cloud.
+
+At this step it is necessary to align the object to the point cloud and camera images. Use grab, rotate and scale transforms to align the mesh to the images and the point cloud. 
+
+Use the check box to visualize the point cloud. Point cloud is convenient for the initial coarse alignment. Then, select individual camera images and do fine alignment.
+
+![](docs/images/04_align_object_to_scene.jpg)
+
+
+### 6. Adjust transform.
+
+Now, when the object is aligned to the point cloud and camera images, we can undo the transform we had to apply. Click "Adjust Photogrammetry Transform" to return the mesh to its memorized pose. Then, click "Create Ref Images" to recreate images and the point cloud using the new align transform.
+
+![](docs/images/05_adjust_transform.jpg)
+
+
+### 7. Sculpt the mesh to match outlines in all camera views.
+
+Now, when the mesh is in its original pose and all camera images are aligned, use sculpting "elastic grab" brush to match mesh outline with all camera views.
+
+![](docs/images/06_elastic_grab_sculpt.jpg)
+
+
+
+### 8. Create materials (optional step)
+
+If the base mesh you use doesn't have materials, use "UDIM materials" panel to create a set of UDIM materials. The tool analyzes all UV coordinates and creates UDIM material tiles automatically based on where all vertices are located in UV plane.
+
+
+![](docs/images/07_create_udim_materials.jpg)
+
+
+### 9. Texture paint the object using automatic stencil image tool.
+
+Use aligned camera views in texture paint mode and "Align stencil" button to create a texture paint stencil textured aligned with camera views. Unfortunatelly, in Blender I only can reliably position the stencil texture but not always scale it precisely. It might be a bug in Blender itself. For that use "Stencil scale adjustment" edit together with "Align stencil" button. As soon as image and stencil image outlines match, you can start painting.
+
+![](docs/images/08_align_stencil_and_paint.jpg)
+
+
 
 ## Installation
 
@@ -49,7 +93,7 @@ UDIM material layout
 ## TODO
 
 - [ ] Convert to addon.
-- [ ] Add a simple to follow usage tutorial.
+- [X] Add a simple to follow usage tutorial.
 
 
 ## License
