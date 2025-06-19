@@ -55,4 +55,4 @@ MIT License, see LICENSE file for details.
 
 ## Credits
 
-Created by me ([GitHub](https://github.com/z80)) to ease 3D reconstruction workflows in Blender for non-artists.
+Created by me ([GitHub](https://github.com/z80/blender_cloning_helper)) to ease 3D reconstruction workflows in Blender for non-artists.
