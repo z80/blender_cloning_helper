@@ -103,7 +103,7 @@ Switch camera views and use "Align stencil" to paint different parts of the obje
 
 ## License
 
-MIT License, see LICENSE file for details.
+It is free to use, I guess. But please reference this webpage as a sign courtesy.
 
 ## Credits
 
