@@ -372,7 +372,7 @@ def _convert_colmap_to_blender_pt(rx, ry, rz):
     #colmap_quat = Quaternion((qw, qx, qy, qz))
     t = Matrix.Identity( 4 )
     t.translation = location
-    t2 = Quaternion((1, 0, 0), 3.14159365 / 2).to_matrix().to_4x4()
+    t2 = Quaternion((1, 0, 0), 3.14159265 / 2).to_matrix().to_4x4()
     t = t2 @ t0 @ t @ inv_t0
 
     location = t.translation
@@ -733,12 +733,12 @@ def adjust_photogrammetry_transform():
     transform_mat = _get_adjustment_transform()
 
     # Take into account trasnform_from and transform_to
-    t_to = displacement = bpy.context.scene.photogrammetry_properties.transform_to
-    transform_to = Matrix( t_to ).transposed()
+    transform_to_transposed = displacement = bpy.context.scene.photogrammetry_properties.transform_to
+    transform_to = Matrix( transform_to_transposed ).transposed()
     transform_from = _get_transform_from()
     inv_transform_from = transform_from.inverted()
 
-    adj_transform = inv_transform_from @ transform_to
+    adj_transform = transform_to @ inv_transform_from
 
     transform_mat = adj_transform @ transform_mat
 
@@ -756,7 +756,13 @@ def adjust_photogrammetry_transform():
     bpy.context.scene.photogrammetry_properties.additional_rotation     = rotation_euler
     bpy.context.scene.photogrammetry_properties.additional_scale        = scale_scalar
 
+    #validation_mat = _get_adjustment_transform()
+
+    #import pdb
+    #pdb.set_trace()
+
     move_object_to()
+    
 
 
 
