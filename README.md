@@ -1,6 +1,8 @@
 # Blender Cloning Helper
 
-A Blender addon that integrates COLMAP photogrammetry with powerful tools for texture painting, image alignment, and UDIM material creation. Designed to simplify photogrammetry workflows and enable accurate 3D reconstruction from video-derived frames.
+A Blender addon that integrates COLMAP photogrammetry with powerful tools for texture painting, image alignment, and UDIM material creation. Designed to simplify photogrammetry workflows and enable accurate 3D reconstruction from video-derived frames. Inspired by ([Facebuilder](https://keentools.io/products/facebuilder-for-blender)) but made to be usable for any object.
+
+![](docs/images/title.jpg)
 
 ## Features
 
@@ -27,9 +29,10 @@ UDIM material layout
 2. Reconstruct the scene using COLMAP
 3. Import COLMAP results into Blender using the addon
 4. Align a base mesh to the point cloud and image planes
-5. Sculpt the base mesh for accuracy
+5. Sculpt the base mesh to perfectly match the object outline to reference images
 6. Create UDIM materials
 7. Generate stencil textures to texture paint a detailed model
+8. Texture paint the object
 
 ## Installation
 
