@@ -1,7 +1,6 @@
 
 import bpy
 import os
-import subprocess
 
 from utils_photogrammetry import *
 from utils_stencil import *
@@ -10,6 +9,7 @@ from utils_stencil import *
 class WM_OT_CallColmap(bpy.types.Operator):
     bl_idname = "wm.call_colmap"
     bl_label = "Run COLMAP"
+    bl_description = "Call COLMAP structure from motion, create camera poses and a point cloud"
 
     def execute(self, context):
         tool_paths = context.scene.tool_paths
@@ -28,6 +28,7 @@ class WM_OT_CallColmap(bpy.types.Operator):
 class WM_OT_CreateRefImages(bpy.types.Operator):
     bl_idname = "wm.create_ref_images"
     bl_label = "Create Reference Images"
+    bl_description = "Place 3D reference images into the scene"
 
     def execute(self, context):
         
@@ -45,6 +46,7 @@ class WM_OT_CreateRefImages(bpy.types.Operator):
 class WM_OT_CallFfmpeg(bpy.types.Operator):
     bl_idname = "wm.call_ffmpeg"
     bl_label = "Extract video frames using FFmpeg"
+    bl_description = "Extract images from the video file specified."
 
     def execute(self, context):
         scene = context.scene.tool_paths
@@ -104,6 +106,7 @@ class WM_OT_FileSelector(bpy.types.Operator):
 class WM_OT_PlaceCamera(bpy.types.Operator):
     bl_idname = "wm.place_camera"
     bl_label = "Place camera to the selected photogrammetry image pose"
+    bl_description = "Align camera with the selected protogrammetry image"
 
     def execute(self, context):
 
@@ -116,6 +119,7 @@ class WM_OT_PlaceCamera(bpy.types.Operator):
 class WM_OT_AlignStencil(bpy.types.Operator):
     bl_idname = "wm.align_stencil"
     bl_label = "Make brush stencil image match the reference image"
+    bl_description = "Create a texture paint stencil texture aligned with selected photogrammetry image"
 
     def execute(self, context):
 
@@ -129,6 +133,7 @@ class WM_OT_AlignStencil(bpy.types.Operator):
 class WM_OT_IncrementImageIndex(bpy.types.Operator):
     bl_idname = "wm.increment_image_index"
     bl_label = "Make brush stencil image match the reference image"
+    bl_description = "Next image"
 
     def execute(self, context):
 
@@ -141,6 +146,7 @@ class WM_OT_IncrementImageIndex(bpy.types.Operator):
 class WM_OT_DecrementImageIndex(bpy.types.Operator):
     bl_idname = "wm.decrement_image_index"
     bl_label = "Make brush stencil image match the reference image"
+    bl_description = "Previous image"
 
     def execute(self, context):
 
@@ -153,6 +159,7 @@ class WM_OT_DecrementImageIndex(bpy.types.Operator):
 class WM_OT_AssignTransformTo(bpy.types.Operator):
     bl_idname = "wm.assign_transform_to"
     bl_label = "Assign transform to"
+    bl_description = "Memorize mesh transform you want align photogrammetry scene to. Next tranform the mesh to match point cloud/images and press \"adjust transform\"."
 
     def execute(self, context):
 
@@ -163,6 +170,7 @@ class WM_OT_AssignTransformTo(bpy.types.Operator):
 class WM_OT_AdjustPhotogrammetryTransform(bpy.types.Operator):
     bl_idname = "wm.adjust_photogrammetry_transform"
     bl_label = "Assign transform to"
+    bl_description = "Computes adjustment transform restores the mesh to its transform saved when pressed \"Remember Transform To\", aligns the photogrammetry scene accordingly."
 
     def execute(self, context):
 
@@ -175,6 +183,7 @@ class WM_OT_AdjustPhotogrammetryTransform(bpy.types.Operator):
 class WM_OT_MoveObjectTo(bpy.types.Operator):
     bl_idname = "wm.move_object_to"
     bl_label = "Reset transforms from to"
+    bl_description = "Click to restore mesh transform to its memorized place stored when pressed \"Remember Transform To\""
 
     def execute(self, context):
 

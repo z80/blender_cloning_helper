@@ -8,7 +8,6 @@ from panel_utils import *
 from utils_photogrammetry import *
 
 def draw_callback():
-    draw_pins()
     draw_photogrammetry_points3d()
 
 def draw_photogrammetry_points3d():
@@ -36,30 +35,6 @@ def draw_photogrammetry_points3d():
     batch.draw(shader)
 
 
-# Callback function to draw the points
-def draw_pins():
-    # Create a GPUVertBuf to store vertex data
-    format = gpu.types.GPUVertFormat()
-    pos_id = format.attr_add(id="pos", comp_type='F32', len=3, fetch_mode='FLOAT')
-    
-    anchor_points = get_anchor_coordinates()
-    vertex_buffer = gpu.types.GPUVertBuf(len=len(anchor_points), format=format)
-    #vertex_buffer.attr_fill(id=pos_id, data=[(point.x, point.y, point.z) for point in anchor_points])
-    vertex_buffer.attr_fill(id=pos_id, data=anchor_points)
-    
-    # Create the batch for drawing
-    batch = gpu.types.GPUBatch(type='POINTS', buf=vertex_buffer)
-
-    # Set the color for the points (red)
-    shader = gpu.shader.from_builtin('UNIFORM_COLOR')
-    shader.bind()
-    shader.uniform_float("color", (1.0, 0.0, 0.0, 1.0))  # Red color (RGBA)
-
-    # Set point size
-    gpu.state.point_size_set(5.0)
-
-    # Draw the batch
-    batch.draw(shader)
 
 # Operator to enable the drawing
 class VIEW3D_OT_draw_red_markers(bpy.types.Operator):
