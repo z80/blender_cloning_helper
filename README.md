@@ -24,6 +24,7 @@ For a virtual object in a video game use photo mode. Fly around the object, try 
 
 ### 2. Extract video frames using the FFmpeg operator
 Use **Photogrammetry** side panel to extract images from a video. If you have image files, place them to "images" folder adjacent to the blender file.
+
 ![](docs/images/00_extract_frames.jpg)
 
 
