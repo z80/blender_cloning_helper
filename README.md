@@ -75,7 +75,7 @@ If the base mesh you use doesn't have materials, use "UDIM materials" panel to c
 
 ### 9. Texture paint the object using automatic stencil image tool.
 
-Use aligned camera views in texture paint mode and "Align stencil" button to create a texture paint stencil texture aligned with camera views. *Unfortunatelly, in Blender I only can reliably position the stencil texture but not always scale it precisely. It might be, Blender 3d to 2d utils use fixed focal length.* It might be a bug in Blender itself. For that use "Stencil scale adjustment" edit together with "Align stencil" button. As soon as image and stencil image outlines match, you can start texture painting. 
+Use aligned camera views in texture paint mode and "Align stencil" button to create a texture paint stencil texture aligned with camera views. *Unfortunatelly, in Blender I only can reliably position the stencil texture but not always scale it precisely. It might be, Blender 3d to 2d utils use fixed focal length.* It might be a bug in Blender itself. For that use "Stencil scale adjustment" edit together with "Align stencil" button. If the percentage is positive, it makes the stencil texture bigger. If negative, smaller. As soon as 3d image and stencil image outlines match, you can start texture painting. Scale alignment need to be done only once. Foe all images stencil scale is the same and positioning is matched automatically when "Align stencil" button is pressed.
 
 Switch camera views and use "Align stencil" to paint different parts of the object.
 
